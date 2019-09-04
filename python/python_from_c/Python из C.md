@@ -19,28 +19,28 @@
 
 Для работы необходимо подключить заголовочный файл:
 
-```c
+```cpp
  #include <Python.h>
 ```
 Загружаем интерпретатор:
 
-```c
+```cpp
 Py_Initialize();
 ```
 
 Далее идет блок работы с python, например:
 
-```c
+```cpp
 PyRun_SimpleString("print('Hello!')");
 ```
 
 Выгружаем интерпретатор:
 
-```c
+```cpp
 Py_Finalize();
 ```
 Полный пример:
-```c
+```cpp
 #include <Python.h>
 
 void
@@ -76,7 +76,7 @@ collect2: error: ld returned 1 exit status
 
 Пример вызова функции из файла python:
 simple.c
-```c
+```cpp
 #include <Python.h>
 
 void 
@@ -119,7 +119,7 @@ def get_value(x):
 ## Работа с функциями и переменными модуля
 Здесь немного сложнее.
 Загрузка интерпритатора python и модуля func.py в него.:
-```c
+```cpp
 PyObject *
 python_init() {
     // Инициализировать интерпретатор Python
@@ -159,7 +159,7 @@ python_init() {
 }
 ```
 Освобождение ресурсов интерпритатора python:
-```c
+```cpp
 void
 python_clear() {
     // Вернуть ресурсы системе
@@ -176,7 +176,7 @@ python_clear() {
 }
 ```
 Работа с переменными и функциями модуля.
-```c
+```cpp
 /**
  * Передача строки в качестве аргумента и получение строки назад
  */
@@ -242,15 +242,15 @@ python_func_get_val(char *val) {
 }
 ```
 На этом остановимся подробнее
-```c
+```cpp
 pVal = PyObject_CallFunction(pObjct, (char *) "(s)", val);
 ```
 **"(s)"** означает, что пердается 1 параметр типа **char * ** в качестве аргумента функции **get_value(x)**. Если бы нам нужно было передать несколько аргументов функции, то было бы так:
-```c
+```cpp
 pVal = PyObject_CallFunction(pObjct, (char *) "(sss)", val1, val2, val3);
 ```
 Если необходимо передать **int**, то использовалась бы литера **i**, все возможные типы данных и их обозначения можно посмотреть в [документации](https://docs.python.org/3/c-api/arg.html#c.Py_BuildValue) python.
-```c
+```cpp
 pVal = PyObject_CallFunction(pObjct, (char *) "(i)", my_int);
 ```
 
@@ -273,7 +273,7 @@ def get_bool(self, x):
         return False
 ```
 Проблема с которой я столкнулся и не смог пока понять:
-```c
+```cpp
 int
 main() {
     puts("Test func:");
@@ -297,7 +297,7 @@ main() {
 }
 ```
 Если хочу получить **b** или **c** из **func.py**, то на:
-```c
+```cpp
 Py_Finalize();
 ```
 получаю **segmentation fault**. С получением только **a** такой проблемы нет.
@@ -306,7 +306,7 @@ Py_Finalize();
 ## Работа с классом
 Тут еще немножечко посложнее.
 Загрузка интерпритатора python и модуля class.py в него.
-```c
+```cpp
 PyObject *
 python_init() {
     // Инициализировать интерпретатор Python
@@ -360,7 +360,7 @@ python_init() {
 }
 ```
 Передача строки в качестве аргумента и получение строки назад
- ```c
+ ```cpp
 char *
 python_class_get_str(char *val) {
     char *ret = NULL;
