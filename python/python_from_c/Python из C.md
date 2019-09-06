@@ -6,12 +6,11 @@
 ## Пакеты
 Используем стандартное **Python API**. Необходимые пакеты python:   
 
- - **apt-get install python3**
- - **apt-get install python3-dev**
- - **apt-get install python3-all**
- - **apt-get install python3-all-dev**
- - **apt-get install libpython3-all-dev**
-
+ - **python3**
+ - **python3-dev**
+ - **python3-all**
+ - **python3-all-dev**
+ - **libpython3-all-dev**
 
 ## Работа в интерпретаторе
 Самое простое, загрузка интерпретатора python и работа в нем.
@@ -73,6 +72,9 @@ collect2: error: ld returned 1 exit status
 ```
 Здесь думаю важен порядок подключения линкера **-Wl**. Кто знает точнее напишите про это в коментах, дополню ответ.
 
+**Объяснение** от [MooNDeaR](https://habr.com/ru/users/MooNDeaR/):
+>Всё довольно просто — символы ищутся в один проход и все неиспользуемые выбрасываются. Если поставить simple.c в конец, то получается, что использование символа Py_Initialize() линкер увидит после того, как посмотрит в библиотеки питона, все символы которых будут к этому моменту выброшены (потому что не использовались).
+
 Пример вызова функции из файла python:
 simple.c
 ```cpp
@@ -117,7 +119,7 @@ def get_value(x):
 
 ## Работа с функциями и переменными модуля
 Здесь немного сложнее.
-Загрузка интерпретатора python и модуля func.py в него.:
+Загрузка интерпретатора python и модуля func.py в него:
 ```cpp
 PyObject *
 python_init() {
@@ -210,8 +212,6 @@ python_func_get_str(char *val) {
         }
     } while (0);
 
-    Py_XDECREF(pObjct);
-
     return ret;
 }
 
@@ -235,8 +235,6 @@ python_func_get_val(char *val) {
         PyErr_Print();
     }
 
-    Py_XDECREF(pVal);
-
     return ret;
 }
 ```
@@ -244,7 +242,7 @@ python_func_get_val(char *val) {
 ```cpp
 pVal = PyObject_CallFunction(pObjct, (char *) "(s)", val);
 ```
-**"(s)"** означает, что передается 1 параметр типа **char * ** в качестве аргумента функции **get_value(x)**. Если бы нам нужно было передать несколько аргументов функции, то было бы так:
+**"(s)"** означает, что передается 1 параметр типа  **char** * в качестве аргумента функции **get_value(x)**. Если бы нам нужно будет передать несколько аргументов функции, то будет так:
 ```cpp
 pVal = PyObject_CallFunction(pObjct, (char *) "(sss)", val1, val2, val3);
 ```
@@ -271,6 +269,7 @@ def get_bool(self, x):
     else:
         return False
 ```
+(**Проблема решена**)
 Проблема с которой я столкнулся и не смог пока понять:
 ```cpp
 int
@@ -301,6 +300,12 @@ Py_Finalize();
 ```
 получаю **segmentation fault**. С получением только **a** такой проблемы нет.
 При получении переменных класса, тоже проблем нет.
+
+**Объяснение** от [pwl](https://habr.com/ru/users/pwl/):
+>PyObject* PyDict_GetItemString(PyObject *p, const char *key)
+Return value: Borrowed reference. Nothing needs to be done for a borrowed reference.
+
+Проблема была связана с тем, что я вызывал **Py_XDECREF()** для **PyDict_GetItemString()**. Так делать для этой функции ненужно, приводит к **segmentation fault**.
 
 ## Работа с классом
 Тут еще немножечко посложнее.
@@ -387,3 +392,4 @@ python_class_get_str(char *val) {
 
 ## Ссылки
 [Исходные коды примеров](https://github.com/dvjdjvu/python_from_c)
+Следующая статья [C/C++ из Python](https://habr.com/ru/post/466499/)

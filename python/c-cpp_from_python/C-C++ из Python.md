@@ -1,0 +1,258 @@
+<img alt="main" width="500" src="https://habrastorage.org/webt/up/e1/2v/upe12vokda_crnab9gfx9bv-qyu.jpeg" align = "center"/>
+Вдогонку стать, как наоборот вызывать C/C++ из Python. Раз начал писать об этом, то раскроем всю тему до конца. Тем более, что ни чего сложного здесь нет.
+<cut/>
+
+## C
+Здесь все просто, python умеет вызывать C функции без каких либо проблем.
+
+test.c:
+```cpp
+ #include "test.h"
+
+int a = 5;
+double b = 5.12345;
+char c = 'X';
+
+int 
+func_ret_int(int val) { 
+    printf("get func_ret_int: %d\n", val);
+    return val;
+} 
+
+double 
+func_ret_double(double val) { 
+    printf("get func_ret_double: %f\n", val);
+    return val;
+} 
+
+char *
+func_ret_str(char *val) { 
+    printf("get func_ret_str: %s\n", val);
+    return val;
+} 
+
+char
+func_many_args(int val1, double val2, char val3, short val4) { 
+    printf("get func_many_args: int - %d, double - %f, char - %c, short - %d\n", val1, val2, val3, val4);
+    return val3;
+} 
+```
+test.h:
+```cpp
+#ifndef _TEST_H_
+#define	_TEST_H_
+
+#ifdef	__cplusplus
+extern "C" {
+#endif
+
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+    
+int func_ret_int(int val);
+double func_ret_double(double val);
+char *func_ret_str(char *val);
+
+#ifdef	__cplusplus
+}
+#endif
+
+#endif	/* _TEST_H_ */
+```
+
+Как компилировать :
+```
+gcc -fPIC -shared -o libtest.so test.c
+Hello!
+```
+Исходник компилируется в динамическую библиотеку и готов к бою.
+Переходим к python. В примере показывается как передать аргументы функции, получить результат работы от функции, а так же как получить и изменить значения глобальных переменных.
+
+main.py:
+```python
+#!/usr/bin/python3
+#-*- coding: utf-8 -*-
+
+import ctypes 
+ 
+# Загрузка библиотеки
+test = ctypes.CDLL('./objs/libtest.so')
+
+##
+# Работа с функциями
+##
+
+# Указываем, что функция возвращает int
+test.func_ret_int.restype = ctypes.c_int
+# Указываем, что функция принимает аргумент int
+test.func_ret_int.argtypes = [ctypes.c_int, ]
+
+# Указываем, что функция возвращает double
+test.func_ret_double.restype = ctypes.c_double
+# Указываем, что функция принимает аргумент double
+test.func_ret_double.argtypes = [ctypes.c_double]
+
+# Указываем, что функция возвращает char *
+test.func_ret_str.restype = ctypes.c_char_p
+# Указываем, что функция принимает аргумент char *
+test.func_ret_str.argtypes = [ctypes.POINTER(ctypes.c_char), ]
+
+# Указываем, что функция возвращает char
+test.func_many_args.restype = ctypes.c_char
+# Указываем, что функция принимает аргумент char *
+test.func_many_args.argtypes = [ctypes.c_int, ctypes.c_double, ctypes.c_char, ctypes.c_short]
+
+print('ret func_ret_int: ', test.func_ret_int(101))
+print('ret func_ret_double: ', test.func_ret_double(12.123456789))
+
+# Необходимо строку привести к массиву байтов, и массив байтов к строке.
+print('ret func_ret_str: ', test.func_ret_str('Hello!'.encode('utf-8')).decode("utf-8") )
+
+print('ret func_many_args: ', test.func_many_args(15, 18.1617, 'X'.encode('utf-8'), 32000).decode("utf-8"))
+
+print()
+
+##
+# Работа с переменными
+##
+
+# Указываем, что переменная типа int
+a = ctypes.c_int.in_dll(test, "a")
+print('ret a: ', a.value)
+
+# Изменяем значение переменной.
+a.value = 22
+a = ctypes.c_int.in_dll(test, "a")
+print('ret a: ', a.value)
+
+# Указываем, что переменная типа double
+b = ctypes.c_double.in_dll(test, "b")
+print('ret b: ', b.value)
+
+# Указываем, что переменная типа char
+c = ctypes.c_char.in_dll(test, "c")
+print('ret c: ', c.value.decode("utf-8"))
+```
+Все возможные типы данных и их обозначения можно посмотреть в [документации](#https://docs.python.org/3/library/ctypes.html) python.
+
+## C++
+Здесь немного сложнее, т.к.  **ctypes** может только работать с **C** функциями. Это для нас не проблема, просто C обвяжем код C++.
+
+Методы класса C++ и обвязка на C:
+```cpp
+#include "test.hpp"
+
+/*
+ * Методы класса
+ */
+std::string test::ret_str(std::string val) {
+    std::cout << "get ret_str: " << val << std::endl;
+    return val;
+}
+
+int test::ret_int(int val) {
+    std::cout << "get ret_int: " << val << std::endl;
+    return val;
+}
+
+double test::ret_double(double val) {
+    std::cout << "get ret_double: " << val << std::endl;
+    return val;
+}
+
+/*
+ * Обвязка C для методов класса C++
+ */
+
+test *test_new() {
+    return new test();
+}
+
+char *test_ret_str(test *test, char *val) {
+    std::string str = test->ret_str(std::string(val));
+    char *ret = new char[str.length() + 1];
+    
+    strcpy(ret, str.c_str());
+    
+    return ret;
+}
+
+int test_ret_int(test *test, int val) {
+    return test->ret_int(val);
+}
+
+double test_ret_double(test *test, double val) {
+    return test->ret_double(val);
+}
+```
+
+Но есть один нюанс, обвязку надо объявить extern C. Что бы ++ компилятор не перегрузил имена функций обвязки. Если он это сделает, то мы не сможем через ctypes работать с нашими функциями.
+test.hpp:
+```cpp
+#include <iostream>
+#include <string.h>
+
+class test {
+public:
+    int a = 5;
+    double b = 5.12345;
+    char c = 'X';
+
+    std::string ret_str(std::string val);
+    int ret_int(int val);
+    double ret_double(double val);
+};
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+    test *test_new();
+    char *test_ret_str(test *test, char *val);
+    int test_ret_int(test *test, int val);
+    double test_ret_double(test *test, double val);
+
+#ifdef __cplusplus
+}
+#endif
+```
+Как компилировать :
+g++ -fPIC -shared -o libtestpp.so test.cpp 
+
+С  python все так же просто.
+
+```python
+# Загрузка библиотеки
+testpp = ctypes.CDLL('./objs/libtestpp.so')
+
+# Указываем, что функция возвращает указатель
+testpp.test_new.restype = ctypes.c_void_p
+
+# Указываем, что функция возвращает char *
+testpp.test_ret_str.restype = ctypes.c_char_p
+# Указываем, что функция принимает аргумент void * и char *
+testpp.test_ret_str.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+
+# Указываем, что функция возвращает int
+testpp.test_ret_int.restype = ctypes.c_int
+# Указываем, что функция принимает аргумент void * и int
+testpp.test_ret_int.argtypes = [ctypes.c_void_p, ctypes.c_int]
+
+# Указываем, что функция возвращает double
+testpp.test_ret_double.restype = ctypes.c_double
+# Указываем, что функция принимает аргумент void * и double
+testpp.test_ret_double.argtypes = [ctypes.c_void_p, ctypes.c_double]
+
+test = testpp.test_new()
+print('ret test_ret_str: ', testpp.test_ret_str(test, 'Hello!'.encode('utf-8')).decode("utf-8"))
+print('ret test_ret_int: ', testpp.test_ret_int(test, 123))
+print('ret test_ret_double: ', testpp.test_ret_double(test, 9.87654321))
+```
+Код постарался закомментировать понятно, что бы здесь писать поменьше )
+
+Надеюсь будет полезно.
+
+## Ссылки
+[Исходные коды примеров](https://github.com/dvjdjvu/c-cpp_from_python)
+Предыдущая статья [Python из C](https://habr.com/ru/post/466181/)
