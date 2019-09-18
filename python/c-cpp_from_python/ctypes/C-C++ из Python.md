@@ -1,5 +1,5 @@
-<img alt="main" width="500" src="https://habrastorage.org/webt/up/e1/2v/upe12vokda_crnab9gfx9bv-qyu.jpeg" align = "center"/>
-Вдогонку стать, как наоборот вызывать C/C++ из Python. Раз начал писать об этом, то раскроем всю тему до конца. Тем более, что ни чего сложного здесь нет.
+<img alt="main" width="500" src="https://habrastorage.org/webt/fp/ig/sb/fpigsboyg1gykkbxi1sm7wwyv_q.jpeg" align = "center"/>
+Про то как вызывать [Python из C](https://habr.com/ru/post/466181/) написал в прошлой статье, теперь поговорим как делать наоборот и вызывать C/C++ из Python. Раз начал писать об этом, то раскроем всю тему до конца. Тем более, что ни чего сложного здесь нет тоже.
 <cut/>
 
 ## C
@@ -7,7 +7,7 @@
 
 test.c:
 ```cpp
- #include "test.h"
+#include "test.h"
 
 int a = 5;
 double b = 5.12345;
@@ -53,6 +53,7 @@ extern "C" {
 int func_ret_int(int val);
 double func_ret_double(double val);
 char *func_ret_str(char *val);
+char func_many_args(int val1, double val2, char val3, short val4)ж
 
 #ifdef	__cplusplus
 }
@@ -64,7 +65,6 @@ char *func_ret_str(char *val);
 Как компилировать :
 ```
 gcc -fPIC -shared -o libtest.so test.c
-Hello!
 ```
 Исходник компилируется в динамическую библиотеку и готов к бою.
 Переходим к python. В примере показывается как передать аргументы функции, получить результат работы от функции, а так же как получить и изменить значения глобальных переменных.
@@ -100,13 +100,13 @@ test.func_ret_str.argtypes = [ctypes.POINTER(ctypes.c_char), ]
 
 # Указываем, что функция возвращает char
 test.func_many_args.restype = ctypes.c_char
-# Указываем, что функция принимает аргумент char *
+# Указываем, что функция принимает аргументы int, double. char, short
 test.func_many_args.argtypes = [ctypes.c_int, ctypes.c_double, ctypes.c_char, ctypes.c_short]
 
 print('ret func_ret_int: ', test.func_ret_int(101))
 print('ret func_ret_double: ', test.func_ret_double(12.123456789))
 
-# Необходимо строку привести к массиву байтов, и массив байтов к строке.
+# Необходимо строку привести к массиву байтов, затем полученный массив байтов приводим к строке.
 print('ret func_ret_str: ', test.func_ret_str('Hello!'.encode('utf-8')).decode("utf-8") )
 
 print('ret func_many_args: ', test.func_many_args(15, 18.1617, 'X'.encode('utf-8'), 32000).decode("utf-8"))
@@ -135,6 +135,57 @@ c = ctypes.c_char.in_dll(test, "c")
 print('ret c: ', c.value.decode("utf-8"))
 ```
 Все возможные типы данных и их обозначения можно посмотреть в [документации](#https://docs.python.org/3/library/ctypes.html) python.
+
+#### Работа со структурами
+C - объявление структуры в test.h:
+```cpp
+typedef struct test_st_s test_st_t;
+
+struct test_st_s {
+    int val1;
+    double val2;
+    char val3;
+};
+```
+Функция по работе с нашей структурой:
+```cpp
+test_st_t *
+func_ret_struct(test_st_t *test_st) {     
+    if (test_st) {
+        printf("C get test_st: val1 - %d, val2 - %f, val3 - %c\n", test_st->val1, test_st->val2, test_st->val3);
+    }
+    
+    return test_st;
+} 
+
+```
+Python:
+```python
+import sys
+import struct
+
+# Объявляем структуру в Python аналогичную в C
+class test_st_t(ctypes.Structure):
+    _fields_ = [('val1', ctypes.c_int),
+                ('val2', ctypes.c_double),
+                ('val3', ctypes.c_char)]
+
+# Указываем, что функция возвращает test_st_t *
+test.func_ret_struct.restype = ctypes.POINTER(test_st_t)
+# Указываем, что функция принимает аргумент void *
+test.func_ret_struct.argtypes = [ctypes.c_void_p] 
+
+# Создаем структуру
+test_st = test_st_t(19, 3.5, 'Z'.encode('utf-8'))
+
+# Python None == Null C
+ret = test.func_ret_struct(None)
+print('ret func_ret_struct: ', ret) # Если передали None, то его и получим назад
+ret = test.func_ret_struct(ctypes.byref(test_st))
+
+# Полученные данные из C
+print('ret val1 = {}\nret val2 = {}\nret val3 = {}'.format(ret.contents.val1, ret.contents.val2, ret.contents.val3.decode("utf-8")))
+```
 
 ## C++
 Здесь немного сложнее, т.к.  **ctypes** может только работать с **C** функциями. Это для нас не проблема, просто C обвяжем код C++.
@@ -165,29 +216,63 @@ double test::ret_double(double val) {
  * Обвязка C для методов класса C++
  */
 
+// Создаем класс test, и получаем указатель на него.
 test *test_new() {
     return new test();
 }
 
+// Удаляем класс test.
+void test_del(test *test) {
+    delete test;
+}
+
+/*
+ * Вызов методов класса.
+ */
+
+// Обертка над методом ret_str
 char *test_ret_str(test *test, char *val) {
+    // char * к std::string
     std::string str = test->ret_str(std::string(val));
-    char *ret = new char[str.length() + 1];
     
+    // std::string к char *
+    char *ret = new char[str.length() + 1];
     strcpy(ret, str.c_str());
     
     return ret;
 }
 
+// Обертка над методом ret_int
 int test_ret_int(test *test, int val) {
     return test->ret_int(val);
 }
 
+// Обертка над методом ret_double
 double test_ret_double(test *test, double val) {
     return test->ret_double(val);
 }
+
+/*
+ * Получение переменных класса.
+ */
+
+// Обертка для получения a
+int test_get_a(test *test) {
+    return test->a;
+}
+
+// Обертка для получения b
+double test_get_b(test *test) {
+    return test->b;
+}
+
+// Обертка для получения c
+char test_get_c(test *test) {
+    return test->c;
+}
 ```
 
-Но есть один нюанс, обвязку надо объявить extern C. Что бы ++ компилятор не перегрузил имена функций обвязки. Если он это сделает, то мы не сможем через ctypes работать с нашими функциями.
+Но есть один нюанс, обвязку надо объявить как **extern C**. Чтобы ++ компилятор не перегрузил имена функций обвязки. Если он это сделает, то мы не сможем через ctypes работать с нашими функциями.
 test.hpp:
 ```cpp
 #include <iostream>
@@ -209,9 +294,14 @@ extern "C" {
 #endif
 
     test *test_new();
+    void test_del(test *test);
     char *test_ret_str(test *test, char *val);
     int test_ret_int(test *test, int val);
     double test_ret_double(test *test, double val);
+	
+    int test_get_a(test *test);
+    double test_get_b(test *test);
+    char test_get_c(test *test);
 
 #ifdef __cplusplus
 }
@@ -228,6 +318,13 @@ testpp = ctypes.CDLL('./objs/libtestpp.so')
 
 # Указываем, что функция возвращает указатель
 testpp.test_new.restype = ctypes.c_void_p
+# Создание класса test
+test = testpp.test_new() 
+
+##
+# Работа с методами
+##
+
 
 # Указываем, что функция возвращает char *
 testpp.test_ret_str.restype = ctypes.c_char_p
@@ -244,14 +341,37 @@ testpp.test_ret_double.restype = ctypes.c_double
 # Указываем, что функция принимает аргумент void * и double
 testpp.test_ret_double.argtypes = [ctypes.c_void_p, ctypes.c_double]
 
-test = testpp.test_new()
+print('Работа с методами:')
+# В качестве 1-ого аргумента передаем указатель на наш класс
 print('ret test_ret_str: ', testpp.test_ret_str(test, 'Hello!'.encode('utf-8')).decode("utf-8"))
 print('ret test_ret_int: ', testpp.test_ret_int(test, 123))
 print('ret test_ret_double: ', testpp.test_ret_double(test, 9.87654321))
+
+##
+# Работа с переменными
+##
+
+# Указываем, что функция возвращает int
+testpp.test_get_a.restype = ctypes.c_int
+# Указываем, что функция возвращает double
+testpp.test_get_b.restype = ctypes.c_double
+# Указываем, что функция возвращает char
+testpp.test_get_c.restype = ctypes.c_char
+
+print('\nРабота с переменными:')
+print('ret test_get_a: ', testpp.test_get_a(test))
+print('ret test_get_b: ', testpp.test_get_b(test))
+print('ret test_get_c: ', testpp.test_get_c(test).decode("utf-8"))
+
+# Удаляем класс
+testpp.test_del(test) 
 ```
 Код постарался закомментировать понятно, что бы здесь писать поменьше )
 
 Надеюсь будет полезно.
+
+## Благодарность
+[DollaR84](https://habr.com/ru/users/DollaR84/) за его помощь.
 
 ## Ссылки
 [Исходные коды примеров](https://github.com/dvjdjvu/c-cpp_from_python)
