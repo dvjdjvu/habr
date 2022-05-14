@@ -1,0 +1,146 @@
+<div class="tm-article-body" data-gallery-root="" lang="ru"><div></div> <div id="post-content-body"><div><div class="article-formatted-body article-formatted-body article-formatted-body_version-1"><div xmlns="http://www.w3.org/1999/xhtml"><div style="text-align:center;"><img alt="main" data-src="https://habrastorage.org/webt/tu/vr/ec/tuvrecn2a_yv1mikcfb39r9hlfa.png" src="https://habrastorage.org/r/w1560/webt/tu/vr/ec/tuvrecn2a_yv1mikcfb39r9hlfa.png" width="800"/></div><br/>
+<h2 id="chto-takoe-hdbhttpswwwtango-controlsorgcommunityproject-docshdbplusplus">Что такое <a href="https://www.tango-controls.org/community/project-docs/hdbplusplus/" rel="nofollow noopener noreferrer">HDB++</a>?</h2><br/>
+<p>Это система архивирования TANGO, позволяет сохранять данные полученные с устройств в системе TANGO.</p><br/>
+<p>Здесь будет описана работа с Linux (<a href="https://s2innovation.sharepoint.com/:f:/s/Developers/EovD2IBwhppAp-ZLXtawQ6gB9F6aXPPs2msr2hgPGTO-FQ?e=Ii3tnr" rel="nofollow noopener noreferrer"><strong>TangoBox 9.3</strong></a> на основе Ubuntu 18.04), это уже готовая система где все настроено.</p><br/>
+<h2 id="o-chem-statya">О чем статья?</h2><br/>
+<ul>
+<li>Архитектура системы.</li>
+<li>Как настроить архивирование.</li>
+</ul><br/>
+<p>У меня ушло ~ 2 недели чтобы разобраться в архитектуре и написать свои скрипты для <strong>python</strong> под это дело.</p><br/>
+<h2 id="dlya-chego-eto-nuzhno">Для чего это нужно?</h2><br/>
+<p>Позволяет хранить историю показаний Вашего оборудования.</p><br/>
+<ul>
+<li>Вам не нужно думать о том как хранить данные в БД.</li>
+<li>Нужно только указать какие атрибуты с какого оборудования архивировать.</li>
+</ul><a name="habracut"></a><br/>
+<h2 id="gde-vzyat">Где взять?</h2><br/>
+<ul>
+<li><a href="https://www.tango-controls.org/community/project-docs/hdbplusplus/hdbplusplus-downloads/" rel="nofollow noopener noreferrer"><strong>deb &amp;&amp; sql</strong></a></li>
+<li><a href="https://github.com/tango-controls-hdbpp" rel="nofollow noopener noreferrer"><strong>исходники</strong></a></li>
+<li><a href="https://www.tango-controls.org/community/project-docs/hdbplusplus/hdbplusplus-doc/" rel="nofollow noopener noreferrer"><strong>документация</strong></a></li>
+<li><a href="https://tango-controls.readthedocs.io/en/latest/installation/virtualmachine.html" rel="nofollow noopener noreferrer"><strong>образ TangoBox на базе Ubuntu</strong></a></li>
+</ul><br/>
+<h2 id="arhitektura">Архитектура</h2><br/>
+<p><img alt="image" data-src="https://habrastorage.org/webt/si/9f/sq/si9fsq0jjolmzn2t2-ka9n_svnk.png" src="https://habrastorage.org/r/w1560/webt/si/9f/sq/si9fsq0jjolmzn2t2-ka9n_svnk.png"/></p><br/>
+<p>Здесь две самые важные вещи — это <strong>Archiver</strong> и <strong>Archiving DB</strong>. <strong>HDB++ Configuration</strong> графическая утилита для управления Archiver. <strong>HDB++ Viewer</strong> утилита просмотра Archiving DB.</p><br/>
+<p><strong>Archiver</strong> опрашивает наши <strong>Device Server</strong>-а и записывает историю в <strong>Archiving DB</strong>.<br/>
+Archiver это такой же Device Server:</p><br/>
+<p><img alt="image" data-blurred="true" data-src="https://habrastorage.org/webt/wx/bw/4c/wxbw4cyo_occntl8jparsj2drbo.jpeg" src="https://habrastorage.org/r/w780q1/webt/wx/bw/4c/wxbw4cyo_occntl8jparsj2drbo.jpeg"/></p><br/>
+<p><strong>Archiving DB</strong> в нашей системе базируется на <strong>MySQL</strong>, она находится в докере <strong>tangobox-hdbpp</strong>.</p><br/>
+<p><img alt="image" data-blurred="true" data-src="https://habrastorage.org/webt/lx/zx/tf/lxzxtfz04nofarfshjy4jdh3hhy.jpeg" src="https://habrastorage.org/r/w780q1/webt/lx/zx/tf/lxzxtfz04nofarfshjy4jdh3hhy.jpeg"/></p><br/>
+<h2 id="archiver">Archiver</h2><br/>
+<p>За архивацию отвечает <strong>archiving/hdbpp/eventsubscriber.1</strong></p><br/>
+<p><img alt="image" data-blurred="true" data-src="https://habrastorage.org/webt/bc/dd/mw/bcddmwci_lpsr7exia445op9nze.jpeg" src="https://habrastorage.org/r/w780q1/webt/bc/dd/mw/bcddmwci_lpsr7exia445op9nze.jpeg"/></p><br/>
+<p>Посмотрим список команд этого сервера.</p><br/>
+<p><img alt="image" data-blurred="true" data-src="https://habrastorage.org/webt/e7/qk/ts/e7qktshbfap5gkk3dm_de-uqyxg.jpeg" src="https://habrastorage.org/r/w780q1/webt/e7/qk/ts/e7qktshbfap5gkk3dm_de-uqyxg.jpeg"/></p><br/>
+<p>На картинке список команд управления этим Device Server-ом</p><br/>
+<p>Здесь нас интересуют:</p><br/>
+<ul>
+<li><strong>AttibuteAdd</strong> — добавить атрибут.</li>
+<li><strong>AttibutePause</strong> — поставить архивацию на паузу.</li>
+<li><strong>AttibuteRemove</strong> — удалить атрибут.</li>
+<li><strong>AttibuteStart</strong> — начать архивацию.</li>
+<li><strong>AttibuteStatus</strong> — состояние атрибута.</li>
+<li><strong>AttibuteStop</strong> — остановить архивацию.</li>
+</ul><br/>
+<p>Посмотрим через <strong>Jive</strong> список атрибутов за которыми следит Archiver:</p><br/>
+<source lang="bash">jive</source><br/>
+<p><img alt="image" data-blurred="true" data-src="https://habrastorage.org/webt/wx/bw/4c/wxbw4cyo_occntl8jparsj2drbo.jpeg" src="https://habrastorage.org/r/w780q1/webt/wx/bw/4c/wxbw4cyo_occntl8jparsj2drbo.jpeg"/></p><br/>
+<p>Дважды щелкаем на устройство.</p><br/>
+<p><img alt="image" data-blurred="true" data-src="https://habrastorage.org/webt/gq/li/qa/gqliqanb2roaz98yqhl0b4lxhkk.jpeg" src="https://habrastorage.org/r/w780q1/webt/gq/li/qa/gqliqanb2roaz98yqhl0b4lxhkk.jpeg"/></p><br/>
+<p>Управнее этим Device Server-ом осуществляется через утилиту <strong>HDB++ Configuration</strong>, это графическая утилита которая отправляет выше показанные команды в <strong>archiving/hdbpp/eventsubscriber.1</strong>. Дальше будет показано как делать это программно.</p><br/>
+<h2 id="hdb-configuration">HDB++ Configuration</h2><br/>
+<source lang="bash">hdbpp-configurator -configure</source><br/>
+<p><img alt="image" data-blurred="true" data-src="https://habrastorage.org/webt/sv/nw/bh/svnwbh8yxo3l170gmibfly0gdzi.jpeg" src="https://habrastorage.org/r/w780q1/webt/sv/nw/bh/svnwbh8yxo3l170gmibfly0gdzi.jpeg"/></p><br/>
+<p>С помощью нее запускается/останавливается архивация и задаются параметры архивирования. Дважды щелкаем по атрибуту:</p><br/>
+<p><img alt="image" data-blurred="true" data-src="https://habrastorage.org/webt/ve/gq/qt/vegqqtoux5y-2cctdn1dugymqzw.jpeg" src="https://habrastorage.org/r/w780q1/webt/ve/gq/qt/vegqqtoux5y-2cctdn1dugymqzw.jpeg"/></p><br/>
+<ul>
+<li><strong>TTL</strong> — сколько дней будет длиться архивация истории.</li>
+<li><strong>absolute change</strong> — изменение атрибута в единицах.</li>
+<li><strong>relative change</strong> — изменение атрибута в процентах.</li>
+<li><strong>event period</strong> — если значения изменились, то записывать каждые мс.</li>
+<li><strong>Attibute polling period</strong> — записывать каждые мс.</li>
+</ul><br/>
+<h2 id="archiving-db">Archiving DB</h2><br/>
+<p>В ней нас будет интересовать БД <strong>hdbpp</strong>:</p><br/>
+<p><img alt="image" data-blurred="true" data-src="https://habrastorage.org/webt/5e/hh/15/5ehh15mfnxsnbr_di1sc_oqfhzk.jpeg" src="https://habrastorage.org/r/w780q1/webt/5e/hh/15/5ehh15mfnxsnbr_di1sc_oqfhzk.jpeg"/></p><br/>
+<p>Также потребуется настроить доступ к БД, с какой машины и кому разрешено подключаться (Потому что изучать как система была уже настроена мне было лень, легче задать своего пользователя.):</p><br/>
+<source lang="bash">docker exec -i -t 04e048 bash
+mysql</source><br/>
+<source lang="sql">GRANT ALL PRIVILEGES on *.* to 'root'@'172.18.0.1' IDENTIFIED BY 'tango';
+FLUSH PRIVILEGES;</source><br/>
+<p>Наша основная система имеет адрес <strong>172.18.0.1</strong>, docker с БД находится на <strong>172.18.0.7</strong>.</p><br/>
+<p>Теперь перейдем к структуре БД, здесь основная таблица <strong>att_conf</strong>. В ней прописаны атрибуты которые попали в систему архивации:</p><br/>
+<p><img alt="image" data-blurred="true" data-src="https://habrastorage.org/webt/p5/qb/jn/p5qbjnakml0npautm0rhfiz8ixw.jpeg" src="https://habrastorage.org/r/w780q1/webt/p5/qb/jn/p5qbjnakml0npautm0rhfiz8ixw.jpeg"/></p><br/>
+<p>Здесь важные поля <strong>att_conf_id</strong> и <strong>att_conf_data_type_id</strong>. По att_conf_data_type_id из таблицы <strong>att_conf_data_type</strong> получим тип данных атрибута. Например <strong>scalar_devushort_ro</strong>, получив тип данных узнаем таблицу в которой хранится история. Имя таблицы будет <strong>att_scalar_devushort_ro</strong>, из этой таблицы по att_conf_id получаем архив данных интересующего нас атрибута.</p><br/>
+<p>Команда <strong>AttibuteAdd</strong> archiving/hdbpp/eventsubscriber.1 не добавляет запись о необходимом атрибуте в att_conf в отличие от команды добавления <strong>hdbpp-configurator</strong>. Поэтому пришлось делать это самому. Основная проблема найти тип атрибута (который хотим архивировать) в таблице <strong>att_conf_data_type</strong>, взять его <strong>id</strong> и записать его в <strong>att_conf/att_conf_data_type_id</strong>.</p><br/>
+<h2 id="oshibki">Ошибки</h2><br/>
+<p>Так же случается что по каким-то причинам атрибуты не архивируются. Такие атрибуты попадают в <strong>AttributeNokList</strong>:</p><br/>
+<p><img alt="image" data-blurred="true" data-src="https://habrastorage.org/webt/f1/nr/qn/f1nrqnn-kaeuybn-6t9q7ens0co.jpeg" src="https://habrastorage.org/r/w780q1/webt/f1/nr/qn/f1nrqnn-kaeuybn-6t9q7ens0co.jpeg"/></p><br/>
+<p>Посмотреть причину этого можно через <strong>hdbpp-configurator</strong>:</p><br/>
+<p><img data-blurred="true" data-src="https://habrastorage.org/webt/nr/8n/gx/nr8ngx2fhxhxyhedlv1qjaoyknq.jpeg" src="https://habrastorage.org/r/w780q1/webt/nr/8n/gx/nr8ngx2fhxhxyhedlv1qjaoyknq.jpeg"/></p><br/>
+<p><img data-blurred="true" data-src="https://habrastorage.org/webt/zx/kg/ea/zxkgealu746_r0dxylb9h2y-mgu.jpeg" src="https://habrastorage.org/r/w780q1/webt/zx/kg/ea/zxkgealu746_r0dxylb9h2y-mgu.jpeg"/></p><br/>
+<p><img data-blurred="true" data-src="https://habrastorage.org/webt/eu/s0/tt/eus0ttx4qesv7wgapdc80w8rgj4.jpeg" src="https://habrastorage.org/r/w780q1/webt/eu/s0/tt/eus0ttx4qesv7wgapdc80w8rgj4.jpeg"/></p><br/>
+<p>Здесь мы видим что наш Devise Server не запущен.</p><br/>
+<h2 id="python">Python</h2><br/>
+<p>Механизмы python для работы с HDB++.</p><br/>
+<p>Есть официальная библиотека для python<strong>2.7</strong> для работы с HDB++ <a href="https://github.com/tango-controls/PyTangoArchiving" rel="nofollow noopener noreferrer">PyTangoArchiving</a>. Разобраться с ней удалось только когда написал свою библиотеку. По ней не хватает документации, что передается в методы, какие типы данных, что передавать в аргументах (<strong>Это мое мнение</strong>).</p><br/>
+<p><a href="https://github.com/dvjdjvu/hdbpp" rel="nofollow noopener noreferrer"><strong>Модуль</strong></a> создан для версии &gt;= <strong>3.6</strong>. Здесь все стандартные настройки для работы на <strong>TangoBox 9.3</strong> заданы по умолчанию.</p><br/>
+<h3 id="ustanovka-modulya">Установка модуля</h3><br/>
+<source lang="bash">sudo pip3 install -r requirements.txt
+sudo python3 setup.py install</source><br/>
+<p>Зависимости:</p><br/>
+<ul>
+<li><strong>mysql-connector</strong>&gt;=2.2.9</li>
+<li><strong>pytango</strong>&gt;=9.3.2</li>
+</ul><br/>
+<h3 id="kak-ispolzovat">Как использовать</h3><br/>
+<source lang="python">from hdbpp import HDBPP
+
+if __name__ == '__main__':
+    hdbpp = HDBPP()
+    # семантика:
+    # __init__(self, host="172.18.0.7", user="root", password="tango", database="hdbpp", 
+    #    archive_server_name="archiving/hdbpp/eventsubscriber.1",
+    #    server_default = "tango://tangobox:10000")
+
+    # Подключиться к серверу архивации и к БД с архивами.
+    if hdbpp.connect() == False :
+        exit(0)
+
+    # Получить историю атрибута за все время.
+    archive = hdbpp.get_archive('tango://tangobox:10000/ECG/ecg/1/Lead')
+    for a in archive:
+        print(a)
+
+    # Текущий статус архивации атрибута
+    ret = hdbpp.archiving_status('tango://tangobox:10000/ECG/ecg/1/Lead')
+    print(ret)
+
+    # Добавить атрибут на сервер архивации
+    hdbpp.archiving_add(['tango://tangobox:10000/ECG/ecg/1/Lead'])
+
+    # Начать архивацию атрибута
+    hdbpp.archiving_start('tango://tangobox:10000/ECG/ecg/1/Lead', 10 * 60 * 1000, 5 * 60 * 1000, 2, 1)
+    # где:
+    # 10 * 60 * 1000 - опрашивать и архивировать атрибут каждые мс
+    # 5 * 60 * 1000 - архивировать атрибут каждые мс, если значение вышло за порог
+    # 2 - порог изменения атрибута в единицах
+    # 1 - порог изменения атрибута в процентах
+
+    # Остановить архивацию атрибута
+    hdbpp.archiving_stop('tango://tangobox:10000/ECG/ecg/1/Lead')
+
+    # Закрыть соединение
+    hdbpp.close()</source><br/>
+<p>Более подробная документация в коде.<br/>
+Ее можно посмотреть например так:</p><br/>
+<source lang="bash">pydoc3 hdbpp.HDBPP</source><br/>
+<h2 id="ssylki">Ссылки</h2><br/>
+<ul>
+<li><a href="https://github.com/dvjdjvu/hdbpp" rel="nofollow noopener noreferrer">Исходные коды</a></li>
+<li><a href="https://habr.com/ru/post/507144/">Статья про Tango Controls</a></li>
+</ul><br/>
+<p>Статью писал для себя, потому что спустя некоторое время начинаю забывать как и что делать.</p><br/>
+<p>Спасибо за внимание.</p></div></div></div> <div class="v-portal" style="display:none;"></div></div> <!-- --> <!-- --></div>

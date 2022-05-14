@@ -1,0 +1,82 @@
+<div class="tm-article-body" data-gallery-root="" lang="ru"><div></div> <div id="post-content-body"><div><div class="article-formatted-body article-formatted-body article-formatted-body_version-1"><div xmlns="http://www.w3.org/1999/xhtml"><img alt="main" data-blurred="true" data-src="https://habrastorage.org/webt/rz/l8/s0/rzl8s0pnehcut_fbc7adfyu9kvy.jpeg" src="https://habrastorage.org/r/w780q1/webt/rz/l8/s0/rzl8s0pnehcut_fbc7adfyu9kvy.jpeg" width="700"/><br/>
+<p>Несколько последних лет хотелось заполучить игрушку на пульте управления и обязательно с видео. Но не купить готовую, а сделать самому. И в итоге заказал себе вот такую игрушку, с простенькой системой управления, но большим потенциалом для модернизации. На все работы от старта и до почти завершения ушло ~ 9 месяцев. Большую часть этого времени ждал комплектующие из Китая.<br/>
+Статью пишу по большей части для себя, что бы в дальнейшем не забыть что делал, как, зачем и почему.<br/>
+Она будет содержать две основные части: аппаратную и программную и возможно еще одну часть про компоновку железа. Сначала опишу аппаратную часть, из чего собирал, с какими проблемами сталкивался и как их решал.</p><a name="habracut"></a><br/>
+<h3 id="1-apparatnaya-chast">1. Аппаратная часть</h3><br/>
+<p>Система состоит из пульта управления и аппаратуры установленной на машинке. Рассмотрим их подробнее. </p><br/>
+<h4 id="11-pult-upravleniya">1.1 Пульт управления</h4><br/>
+<p>Компоненты:</p><br/>
+<ul>
+<li>Raspberry pi 3</li>
+<li>ADS1115 АЦП</li>
+<li><a href="https://www.waveshare.com/wiki/Game_HAT">Game HAT</a></li>
+</ul><br/>
+<h4 id="game-hat">Game HAT</h4><br/>
+<p>Game HAT был выбран т.к. это уже готовое решение совмещающие в себе экран, джойстик и клавиатуру достаточную для управления машинкой.</p><br/>
+<img alt="Game HAT" data-blurred="true" data-src="https://habrastorage.org/webt/ku/cy/16/kucy16tjvivlokfhjnm1evobwis.jpeg" src="https://habrastorage.org/r/w780q1/webt/ku/cy/16/kucy16tjvivlokfhjnm1evobwis.jpeg" width="400"/><br/>
+<p>Джойстиком на этой плате является KY-023. Его решил использовать вместо руля. Но оказалось, что в Raspberry нет АЦП и единственные значения которые можно было получить от него 0 и 1, что явно недостаточно для плавного поворота колес.</p><br/>
+<img alt="KY-023" data-blurred="true" data-src="https://habrastorage.org/webt/kn/qb/oe/knqboerydcnmgjguaidv8ctyycg.jpeg" src="https://habrastorage.org/r/w780q1/webt/kn/qb/oe/knqboerydcnmgjguaidv8ctyycg.jpeg" width="200"/><br/>
+<h4 id="ads1115">ADS1115</h4><br/>
+<p>Эту проблему решил модуль ADS1115.</p><br/>
+<img alt="ADS1115" data-blurred="true" data-src="https://habrastorage.org/webt/_r/8n/f-/_r8nf-9rsvzupsigrs2f7q2k59a.jpeg" src="https://habrastorage.org/r/w780q1/webt/_r/8n/f-/_r8nf-9rsvzupsigrs2f7q2k59a.jpeg" width="200"/><br/>
+<p>Модуль был припаян к Game HAT и прикреплен к ней с помощью ленты 3M. Показания снимаются со средних ножек переменных резисторов на джойстике. Выглядит все так:</p><br/>
+<img alt="My Game HAT" data-blurred="true" data-src="https://habrastorage.org/webt/0v/zx/yt/0vzxythizaow9qadldo2mdvma7w.jpeg" src="https://habrastorage.org/r/w780q1/webt/0v/zx/yt/0vzxythizaow9qadldo2mdvma7w.jpeg" width="600"/><br/>
+<p>Джойстик по аналогии впаян в Game HAT. Провода припаяны к разъемам Game HAT, которые соответствуют разъемам питания и I2C на Raspberry. Схема подключения:</p><br/>
+<img alt="remote" data-blurred="true" data-src="https://habrastorage.org/webt/x3/7g/nc/x37gnce-kbcv8ec9shm0par52ai.jpeg" src="https://habrastorage.org/r/w780q1/webt/x3/7g/nc/x37gnce-kbcv8ec9shm0par52ai.jpeg" width="800"/><br/>
+<p>На этом аппаратный сбор пульта управления закончен. Внешне ни каких видимых изменений он не претерпел.</p><br/>
+<h4 id="12-mashinka">1.2 Машинка</h4><br/>
+<p>Как это все ужасно выглядит под капотом:</p><br/>
+<img alt="car" data-blurred="true" data-src="https://habrastorage.org/webt/mi/mw/ii/mimwiiy-4lj44y5ag-lpmp4rfb8.jpeg" src="https://habrastorage.org/r/w780q1/webt/mi/mw/ii/mimwiiy-4lj44y5ag-lpmp4rfb8.jpeg" width="800"/><br/>
+<p>Начнем разбираться.</p><br/>
+<p>Компоненты:</p><br/>
+<ul>
+<li>Raspberry pi 3</li>
+<li>Raspberry Pi Camera v2 NoIR</li>
+<li>PCA9685 ШИМ генератор</li>
+<li>Mini-360 понижающий преобразователь питания</li>
+<li>BMS CF-4S30A-A контролер заряда</li>
+<li>L298N драйвер управления двигателем</li>
+<li>Моя плата управления светом на основе драйвера L293</li>
+<li>3 литий-ионных батареи 18650 </li>
+<li>370 мотор </li>
+<li>DI-1181MG сервопривод</li>
+</ul><br/>
+<h4 id="pitanie">Питание</h4><br/>
+<p>Начнем от питания, его обеспечивают три аккумулятора 18650, соединенных последовательно и дающих ~ 12 вольт.<br/>
+Аккумуляторы подсоединены через плату BMS CF-4S30A-A, что бы их можно было заряжать и не разрядить в ноль на покатушках.</p><br/>
+<img alt="4S 40A BMS" data-blurred="true" data-src="https://habrastorage.org/webt/xt/q0/_k/xtq0_k_ycvqpeuivas6r8jnbgpw.jpeg" src="https://habrastorage.org/r/w780q1/webt/xt/q0/_k/xtq0_k_ycvqpeuivas6r8jnbgpw.jpeg" width="200"/><br/>
+<p>Но это плата предназначена для 4-х аккумуляторов, поэтому она была переделана для работы с 3-мя аккумуляторами. Почему была взята она, а не 3S 40A BMS. Потому что она была под рукой.</p><br/>
+<p>Схема переделки:</p><br/>
+<img alt="4S 40A BMS" data-blurred="true" data-src="https://habrastorage.org/webt/nl/li/-y/nlli-yxzn84k_lmtodkhozqaeog.jpeg" src="https://habrastorage.org/r/w780q1/webt/nl/li/-y/nlli-yxzn84k_lmtodkhozqaeog.jpeg" width="450"/><br/>
+<p>Этим напряжением питается 370 мотор через драйвер L298N.</p><br/>
+<img alt="370" data-blurred="true" data-src="https://habrastorage.org/webt/s6/9b/of/s69bof6t16zmpse8jn29at93ifa.jpeg" src="https://habrastorage.org/r/w780q1/webt/s6/9b/of/s69bof6t16zmpse8jn29at93ifa.jpeg" width="300"/><br/>
+<img alt="L298N" data-blurred="true" data-src="https://habrastorage.org/webt/_l/vi/t4/_lvit4ox1-doo6kw8mjpixsvkny.jpeg" src="https://habrastorage.org/r/w780q1/webt/_l/vi/t4/_lvit4ox1-doo6kw8mjpixsvkny.jpeg" width="300"/><br/>
+<p>Для питания Raspberry используются напряжение с этих же аккумуляторов, но напряжение понижается модулем Mini-360 до 5 вольт.</p><br/>
+<img alt="mini-360" data-blurred="true" data-src="https://habrastorage.org/webt/ag/zn/ra/agznrap593x3j6t4doyakiukgzo.jpeg" src="https://habrastorage.org/r/w780q1/webt/ag/zn/ra/agznrap593x3j6t4doyakiukgzo.jpeg" width="200"/><br/>
+<p>Raspberry запитал прямо на его ножки.</p><br/>
+<h4 id="dvizhenie">Движение</h4><br/>
+<p>Теперь поговорим о том, как машинка ездит. Для управления рулевым механизмом используется сервопривод DI-1181MG, который управляется с помощью PCA9685. Так же PCA9685 отвечает за управление мотором регулируя его скорость и направление вращения через драйвер L298N. Raspberry же управляет PCA9685 по I2C шине. PCA9685 питается от 5 вольт с понижающего преобразователя. Этого вполне хватает для сервы и управления мотором. Мотор подключен к двум выходам L298N для повышения мощности.</p><br/>
+<img alt="DI-1181MG" data-blurred="true" data-src="https://habrastorage.org/webt/km/wm/_b/kmwm_b7oben_iuu1rhyntdu7bru.jpeg" src="https://habrastorage.org/r/w780q1/webt/km/wm/_b/kmwm_b7oben_iuu1rhyntdu7bru.jpeg" width="170"/><br/>
+<img alt="PCA9685" data-blurred="true" data-src="https://habrastorage.org/webt/zr/3k/k2/zr3kk2nhhqub8p63mmo0ghelcea.jpeg" src="https://habrastorage.org/r/w780q1/webt/zr/3k/k2/zr3kk2nhhqub8p63mmo0ghelcea.jpeg" width="200"/><br/>
+<h4 id="video">Видео</h4><br/>
+<p>Для видео использовал Camera v2 NoIR, она легко подключается к Raspberry. Но без доработок не обошлось. Стандартный шлейф камеры был в длину 15 см. чего не хватило для монтажных работ. Так же этот шлейф нестандартный, он имеет 15 пинов. На aliexpress за один длинный шлейф для этой камеры китайцы хотят больше 1000 рублей. По этому был куплен комплект из 10 стандартных 16 пиновых шлейфов ~ за 300 рублей. И с помощью высокотехнологичной технологии применения канцелярских ножниц переделан в 15 пиновый шлейф для камеры.</p><br/>
+<img alt="camera" data-blurred="true" data-src="https://habrastorage.org/webt/1m/vl/am/1mvlamazfobyscudex2p3xx7d6i.jpeg" src="https://habrastorage.org/r/w780q1/webt/1m/vl/am/1mvlamazfobyscudex2p3xx7d6i.jpeg" width="300"/><br/>
+<img alt="string" data-blurred="true" data-src="https://habrastorage.org/webt/-t/jp/uv/-tjpuv287l5c191kgkjdee_nawm.jpeg" src="https://habrastorage.org/r/w780q1/webt/-t/jp/uv/-tjpuv287l5c191kgkjdee_nawm.jpeg" width="300"/><br/>
+<p>На момент написания статьи, 2-ой месяц жду крепление для камеры в кабину. Пока что машинка показывает только потолок )</p><br/>
+<h4 id="svet">Свет</h4><br/>
+<p>На машинке уже установлен штатный свет, состоящий из фар с 2-мя желтыми светодиодами. Осталось их только запитать.<br/>
+Управление светом осуществляется через мою плату, которая сделана на основе драйвера L293. Питание на диоды подается через резистор. Плата сделана по технологии ЛУТ. На ней так же куча дорожек для разводки питания.<br/>
+Можно было бы для управления светом воспользоваться PCA9685, на том момент когда делал свою не знал про PCA9685 и обходился без нее.</p><br/>
+<p>Схема платы:</p><br/>
+<img alt="my driver" data-blurred="true" data-src="https://habrastorage.org/webt/i0/c1/qx/i0c1qxlmibkwb5yiph3ijkv7d0o.jpeg" src="https://habrastorage.org/r/w780q1/webt/i0/c1/qx/i0c1qxlmibkwb5yiph3ijkv7d0o.jpeg" width="500"/><br/>
+<p>Представлю общую схему подключения:</p><br/>
+<img alt="all" data-blurred="true" data-src="https://habrastorage.org/webt/yi/45/63/yi4563ligy60oj5mzjg_-r2xb9k.jpeg" src="https://habrastorage.org/r/w780q1/webt/yi/45/63/yi4563ligy60oj5mzjg_-r2xb9k.jpeg"/><br/>
+<p>А вот это, что стояло в машинке пока я не влез ))</p><br/>
+<img alt="old" data-blurred="true" data-src="https://habrastorage.org/webt/zh/i0/k8/zhi0k8fol1yt0e_wlnglzihgcvq.jpeg" src="https://habrastorage.org/r/w780q1/webt/zh/i0/k8/zhi0k8fol1yt0e_wlnglzihgcvq.jpeg" width="200"/><br/>
+<p>К моменту написания уже начал забывать, что и как делал. Хотя прошло не больше месяца с момента монтирования.</p><br/>
+<p>По аппаратной части все. В следующей свое статье опишу программную часть, как оживлял железо.</p><br/>
+<h3 id="blagodarnost">Благодарность</h3><br/>
+<p>Моим коллегам по работе: Андрею и Николаю за помощь с железом, Антону и Евгению за помощь в работе с видео. Самоделкин-22 за ЛУТ моей платы. И Мурзику.</p><br/>
+<h3 id="ssylki">Ссылки</h3><br/>
+<p><a href="https://habr.com/ru/post/462331/">Часть 2</a><br/>
+<a href="https://habr.com/ru/post/462763/">Часть 3</a></p></div></div></div> <div class="v-portal" style="display:none;"></div></div> <!-- --> <!-- --></div>

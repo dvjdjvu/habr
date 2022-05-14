@@ -1,0 +1,77 @@
+<div class="tm-article-body" data-gallery-root="" lang="ru"><div></div> <div id="post-content-body"><div><div class="article-formatted-body article-formatted-body article-formatted-body_version-1"><div xmlns="http://www.w3.org/1999/xhtml"><div style="text-align:center;"><img alt="main" data-src="https://habrastorage.org/webt/lu/ah/u_/luahu_ureofiaunaxa2gkdm2zai.png" src="https://habrastorage.org/r/w1560/webt/lu/ah/u_/luahu_ureofiaunaxa2gkdm2zai.png" width="800"/></div><br/>
+<p>Все работы произведены на Linux (<a href="https://s2innovation.sharepoint.com/:f:/s/Developers/EovD2IBwhppAp-ZLXtawQ6gB9F6aXPPs2msr2hgPGTO-FQ?e=Ii3tnr" rel="nofollow noopener noreferrer"><strong>TangoBox 9.3</strong></a> на основе Ubuntu 18.04), который является официальным дистрибутивом проекта.</p><br/>
+<h2 id="soderzhanie">Содержание</h2><br/>
+<ol>
+<li><a href="#install">Установка</a><br/>
+<ol>
+<li><a href="#install-repo">Установка из репозитория</a></li>
+<li><a href="#install-src">Установка из исходников</a></li>
+</ol></li>
+<li><a href="#off">Отключение</a><br/>
+<ol>
+<li><a href="#rest-off">Отключение старого RestServer-а</a></li>
+</ol></li>
+<li><a href="#api">API</a><br/>
+<ol>
+<li><a href="#doc">Документация</a></li>
+</ol></li>
+</ol><a name="habracut"></a><br/>
+<h2 id="ustanovka">Установка</h2><br/>
+<h2 id="ustanovka-iz-repozitoriya">Установка из репозитория</h2><br/>
+<p>Получаем последнюю версию docker-а из репозитория и запускаем его.</p><br/>
+<source lang="bash">docker pull tangocs/rest-server:rest-server-2.1
+docker run --restart unless-stopped -p 8080:8080 -d tangocs/rest-server:rest-server-2.1</source><br/>
+<p>Смотрим результат выполнения. В список контейнеров добавился <strong>tangocs/rest-server</strong>.</p><br/>
+<p><img data-src="https://habrastorage.org/webt/hp/vo/ch/hpvochw2wqyereteof63f-rxbn8.png" src="https://habrastorage.org/r/w1560/webt/hp/vo/ch/hpvochw2wqyereteof63f-rxbn8.png"/></p><br/>
+<p>Список запущенных контейнеров пополнил <strong>tangocs/rest-server:rest-server-2.1</strong>.</p><br/>
+<p><img data-src="https://habrastorage.org/webt/jm/7l/yl/jm7lylie0tpm2kzitxo4orwh_6y.png" src="https://habrastorage.org/r/w1560/webt/jm/7l/yl/jm7lylie0tpm2kzitxo4orwh_6y.png"/></p><br/>
+<p>Проверка работоспособности:</p><br/>
+<p><img data-src="https://habrastorage.org/webt/tc/4x/-t/tc4x-tgnxlrjhdgjsldvbopwvzc.png" src="https://habrastorage.org/r/w1560/webt/tc/4x/-t/tc4x-tgnxlrjhdgjsldvbopwvzc.png"/></p><br/>
+<p><strong>Важный акцент</strong>, в системе <strong>TangoBox 9.3</strong> изначально работает старый RestServer. Работает он не в docker-е, а в <strong>самой системе</strong>! Их <strong>API</strong> отличается.</p><br/>
+<p><img data-src="https://habrastorage.org/webt/zr/et/dn/zretdnrnmlvxtbmlr3vp0pp1slm.png" src="https://habrastorage.org/r/w1560/webt/zr/et/dn/zretdnrnmlvxtbmlr3vp0pp1slm.png"/></p><br/>
+<p>Проверка его работы:</p><br/>
+<p><img data-src="https://habrastorage.org/webt/mo/rr/op/morroplid6jp1oaa14wmi__7beo.png" src="https://habrastorage.org/r/w1560/webt/mo/rr/op/morroplid6jp1oaa14wmi__7beo.png"/></p><br/>
+<p>Работает на <strong>10001</strong> порту, и поскольку он работает в системе, то обратится может к <strong>Tango Controls</strong> как к <strong>localhost</strong>, чего не сможет docker.</p><br/>
+<source lang="bash">http://localhost:10001/tango/rest/rc4/hosts/localhost/10000/devices/sys/tg_test/1/attributes/double_scalar/value</source><br/>
+<p>В docker-t RestServer работает на <strong>8080</strong> порту, и его порт проброшен в систему. Но обращаться к <strong>Tango Controls</strong> он должен по <strong>ip</strong> адресу системы <strong>172.17.0.1</strong> где тот работает!</p><br/>
+<source lang="bash">http://localhost:8080/tango/rest/v10/hosts/172.17.0.1;port=10000/devices/sys/tg_test/1/attributes/double_scalar/value</source><br/>
+<p>Репозиторий содержит <strong>не последнюю</strong> версию. Установить последнюю версию можно из исходников, на текущий момент <strong>2.2</strong>.</p><br/>
+<h3 id="ustanovka-iz-ishodnikov">Установка из исходников</h3><br/>
+<p>Последняя версия <a href="https://github.com/tango-controls/rest-server" rel="nofollow noopener noreferrer">TangoRestServer</a>.</p><br/>
+<source lang="bash">git clone https://github.com/tango-controls/rest-server.git
+cd rest-server</source><br/>
+<p>Собирается docker под <strong>java</strong> версии <strong>11</strong>, но все в системе работает под <strong>8</strong>-ой версий.<br/>
+Временно поменяем версию по умолчанию с 8 на 11.</p><br/>
+<source lang="bash">sudo update-alternatives --config java</source><br/>
+<p><img data-src="https://habrastorage.org/webt/0i/in/0p/0iin0pjssdz7skz2g2k6om09u6u.png" src="https://habrastorage.org/r/w1560/webt/0i/in/0p/0iin0pjssdz7skz2g2k6om09u6u.png"/></p><br/>
+<source lang="bash">mvn package
+docker build -t tangocs/rest-server:rest-server-2.2 . </source><br/>
+<p>Получил следующую ошибку:</p><br/>
+<p><code>COPY failed: file not found in build context or excluded by .dockerignore: stat target/.war: file does not exist</code></p><br/>
+<p>Открываем <strong>Dockerfile</strong> и меняем<br/>
+<code>COPY target/${REST_SERVER_VERSION}.war /usr/local/tomcat/webapps/tango.war</code><br/>
+на<br/>
+<code>COPY target/rest-server-2.2-SNAPSHOT.war /usr/local/tomcat/webapps/tango.war</code></p><br/>
+<p>Т.к. docker собрался с именем <strong>rest-server-2.2-SNAPSHOT.war</strong></p><br/>
+<p>Смотрим список образов:</p><br/>
+<p><img data-src="https://habrastorage.org/webt/wn/v9/5e/wnv95efh8dsmn9agbwhw8ciwa1i.png" src="https://habrastorage.org/r/w1560/webt/wn/v9/5e/wnv95efh8dsmn9agbwhw8ciwa1i.png"/></p><br/>
+<p>Теперь запускаем наш docker, он будет работать на <strong>8080</strong> порту.</p><br/>
+<source lang="bash">docker run --restart unless-stopped -p 8080:8080 -d tangocs/rest-server:rest-server-2.2</source><br/>
+<p>Процедура проверки работоспособности такая же как и в 1-ом абзаце.</p><br/>
+<p><strong>Переключим версию java назад на 8-ую.</strong></p><br/>
+<source lang="bash">sudo update-alternatives --config java</source><br/>
+<h3 id="otklyuchenie-starogo-restserver-a">Отключение старого RestServer-а</h3><br/>
+<p>Запускаем <strong>Astor</strong></p><br/>
+<source lang="bash">astor</source><br/>
+<p><img data-blurred="true" data-src="https://habrastorage.org/webt/rg/tu/6h/rgtu6hcrhrysb8ajek23ir8hz7y.jpeg" src="https://habrastorage.org/r/w780q1/webt/rg/tu/6h/rgtu6hcrhrysb8ajek23ir8hz7y.jpeg"/></p><br/>
+<p>Выбираем ветку <strong>Miscellaneous</strong>, стартер <strong>tangobox</strong>, меню <strong>Open control Panel</strong>. Открывается окно управления стартером.</p><br/>
+<p><img data-blurred="true" data-src="https://habrastorage.org/webt/nt/x7/a5/ntx7a5r9tvdc0xgt49dhztzedt0.jpeg" src="https://habrastorage.org/r/w780q1/webt/nt/x7/a5/ntx7a5r9tvdc0xgt49dhztzedt0.jpeg"/></p><br/>
+<p>Ищем RestServer и выбираем <strong>Set startup level</strong>, и отключаем его.</p><br/>
+<p><img data-blurred="true" data-src="https://habrastorage.org/webt/pk/9k/an/pk9kan62t8qvyuxxxxvt2ve5uom.jpeg" src="https://habrastorage.org/r/w780q1/webt/pk/9k/an/pk9kan62t8qvyuxxxxvt2ve5uom.jpeg"/></p><br/>
+<p>В итоге получается следующее:</p><br/>
+<p><img data-blurred="true" data-src="https://habrastorage.org/webt/3t/vv/jo/3tvvjo67gkvhvzsxetvgz2qq_ha.jpeg" src="https://habrastorage.org/r/w780q1/webt/3t/vv/jo/3tvvjo67gkvhvzsxetvgz2qq_ha.jpeg"/></p><br/>
+<p>Старый RestServer выключен.</p><br/>
+<h2 id="api">API</h2><br/>
+<h3 id="dokumentaciya">Документация</h3><br/>
+<p><a href="https://github.com/tango-controls/rest-api" rel="nofollow noopener noreferrer"><strong>Документация</strong></a></p><br/>
+<p>Спасибо за внимание.</p></div></div></div> <div class="v-portal" style="display:none;"></div></div> <!-- --> <!-- --></div>

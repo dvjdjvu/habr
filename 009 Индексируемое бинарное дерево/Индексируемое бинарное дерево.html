@@ -1,0 +1,114 @@
+<div class="tm-article-body" data-gallery-root="" lang="ru"><div></div> <div id="post-content-body"><div><div class="article-formatted-body article-formatted-body article-formatted-body_version-1"><div xmlns="http://www.w3.org/1999/xhtml"><img alt="main" data-blurred="true" data-src="https://habrastorage.org/webt/v-/is/rb/v-isrbjlhtcwnkdwnxy7-1vpw_e.jpeg" src="https://habrastorage.org/r/w780q1/webt/v-/is/rb/v-isrbjlhtcwnkdwnxy7-1vpw_e.jpeg"/><br/>
+<p>Попалась мне задача следующего вида. Необходимо реализовать контейнер хранения данных обеспечивающий следующий функционал: </p><br/>
+<ul>
+<li>вставить новый элемент</li>
+<li>удалить элемент по порядковому номеру</li>
+<li>получить элемент по порядковому номеру</li>
+<li>данные хранятся в сортированном виде</li>
+</ul><a name="habracut"></a><br/>
+<p>Данные постоянно добавляются и удаляются, структура должна обеспечивать быструю скорость работы. Сначала пытался реализовать такую вещь используя стандартные контейнеры из <strong>std</strong>. Этот путь не увенчался успехом и пришло понимание, что нужно реализовывать что-то самому. Единственное что пришло на ум, это использовать бинарное дерево поиска. Поскольку оно отвечает требованию быстрой вставки, удалению и хранению данных в сортированном виде. Осталось только придумать как проиндексировать все элементы и пересчитывать индексы когда дерево меняется.</p><br/>
+<source lang="cpp">struct node_s {    
+    data_t data;
+
+    uint64_t weight; // вес узла
+
+    node_t *left;
+    node_t *right;
+
+    node_t *parent;
+};</source><br/>
+<p>В статье будет больше картинок и теории чем кода. Код можно будет посмотреть по ссылке внизу.</p><br/>
+<h2 id="ves">Вес</h2><br/>
+<p>Для этого дерево подверглось небольшой модифицикации, добавилась дополнительная информация о <strong>весе</strong> узла. Вес узла это <strong>кол-во потомков данного узла</strong> + <strong>1</strong> (вес единичного элемента).</p><br/>
+<p>Функция получения веса узла:</p><br/>
+<source lang="cpp">uint64_t bntree::get_child_weight(node_t *node) {
+    if (node) {
+        return node-&gt;weight;
+    }
+
+    return 0;
+}</source><br/>
+<p>У листа соответственно вес равен <strong>0</strong>.</p><br/>
+<p>Далее перейдем к наглядному представлению примера такого дерева. <strong>Черным</strong> цветом в нем будет показан ключ узла (значение показано не будет, т.к. в этом нет надобности), <strong>красным</strong> — вес узла, <strong>зеленым</strong> — индекс узла.</p><br/>
+<p>Когда дерево у нас пусто, то его вес равен 0. Добавим в него корневой элемент:</p><br/>
+<div style="text-align:center;"><img data-blurred="true" data-src="https://habrastorage.org/webt/3k/w-/cm/3kw-cmbkqmznh88ltnf8mcqamjs.jpeg" src="https://habrastorage.org/r/w780q1/webt/3k/w-/cm/3kw-cmbkqmznh88ltnf8mcqamjs.jpeg"/></div><br/>
+<p>Вес дерева становится 1, вес корневого элемента 1. Вес корневого элемента является весом дерева.</p><br/>
+<p>Добавим еще несколько элементов:</p><br/>
+<div style="text-align:center;"><img data-blurred="true" data-src="https://habrastorage.org/webt/9h/nr/y-/9hnry-edcixmu6p6kzveev9cvca.jpeg" src="https://habrastorage.org/r/w780q1/webt/9h/nr/y-/9hnry-edcixmu6p6kzveev9cvca.jpeg"/></div><br/>
+<div style="text-align:center;"><img data-blurred="true" data-src="https://habrastorage.org/webt/ml/mi/8i/mlmi8ir9gkf1ofttssr-my2wney.jpeg" src="https://habrastorage.org/r/w780q1/webt/ml/mi/8i/mlmi8ir9gkf1ofttssr-my2wney.jpeg"/></div><br/>
+<div style="text-align:center;"><img data-blurred="true" data-src="https://habrastorage.org/webt/tp/0v/tp/tp0vtpi340nlerh_rwgg1m_rzki.jpeg" src="https://habrastorage.org/r/w780q1/webt/tp/0v/tp/tp0vtpi340nlerh_rwgg1m_rzki.jpeg"/></div><br/>
+<div style="text-align:center;"><img data-blurred="true" data-src="https://habrastorage.org/webt/wv/-a/rv/wv-arvnf887lgmotq30xkyowzck.jpeg" src="https://habrastorage.org/r/w780q1/webt/wv/-a/rv/wv-arvnf887lgmotq30xkyowzck.jpeg"/></div><br/>
+<p>Каждый раз когда идет добавление нового элемента, мы спускаемся по узлам в низ и увеличиваем счетчик веса каждого пройденного узла. При создании нового узла ему выставляется вес <strong>1</strong>. Если узел с таким ключом уже существует, то перезапишем значение и пойдем назад до корня вверх отменяя изменения весов у всех узлов которые мы прошли.<br/>
+Если идет удаление узла, то мы спускается вниз и декрементируем веса пройденных узлов. </p><br/>
+<h2 id="indeksy">Индексы</h2><br/>
+<p>Теперь перейдем к тому как проиндексировать узлы. Узлы явно не хранят свой индекс, он вычисляется на основе веса узлов. Если бы они хранили свой индекс, то требовалось бы <strong>O(n)</strong> времени, что бы обновить индексы всех узлов после каждого изменения дерева.<br/>
+Перейдем к наглядному представлению. Наше дерево пусто, добавим в него 1-ый узел:</p><br/>
+<div style="text-align:center;"><img data-blurred="true" data-src="https://habrastorage.org/webt/gg/rp/ec/ggrpec1xu2hu4ngiaw6zixtbraa.jpeg" src="https://habrastorage.org/r/w780q1/webt/gg/rp/ec/ggrpec1xu2hu4ngiaw6zixtbraa.jpeg"/></div><br/>
+<p>Первый узел имеет индекс <strong>0</strong>, а теперь возможны 2-а случая. В первом индекс корневого элемента изменится, во втором не изменится.</p><br/>
+<div style="text-align:center;"><img data-blurred="true" data-src="https://habrastorage.org/webt/1-/k9/j_/1-k9j_lg4vmawhczzon2nunahkk.jpeg" src="https://habrastorage.org/r/w780q1/webt/1-/k9/j_/1-k9j_lg4vmawhczzon2nunahkk.jpeg"/></div><br/>
+<p>У корня левое поддерево весит 1.</p><br/>
+<p>Второй случай:</p><br/>
+<div style="text-align:center;"><img data-blurred="true" data-src="https://habrastorage.org/webt/yc/it/nw/ycitnwkz07nwoq2rxn9ttdyvto8.jpeg" src="https://habrastorage.org/r/w780q1/webt/yc/it/nw/ycitnwkz07nwoq2rxn9ttdyvto8.jpeg"/></div><br/>
+<p>Индекс корня не изменился, поскольку вес его левого поддерева остался 0.</p><br/>
+<p>Как считается индекс узла, это вес его левого поддерева + число переданное от родителя. Что это за число?, Это счетчик индексов, изначально он равен <strong>0</strong>, т.к. у корня нет родителя. Дальше все зависит от того куда мы спускаемся к левому ребенку или правому. Если к левому, то к счетчику ни чего не прибавляется. Если к правому то прибавляем индекс текущего узла.</p><br/>
+<div style="text-align:center;"><img data-blurred="true" data-src="https://habrastorage.org/webt/34/x3/gg/34x3ggw1dx7mx4irx53trsc_afc.jpeg" src="https://habrastorage.org/r/w780q1/webt/34/x3/gg/34x3ggw1dx7mx4irx53trsc_afc.jpeg"/></div><br/>
+<p>К примеру как вычисляется индекс элемента с ключом 8 (правый ребенок корня). Это "Индекс корня" + "вес левого поддерева узла с ключом 8" + "1" == 3 + 2 + 1 == <strong>6</strong><br/>
+Индексом элемента с ключом 6 будет "Индекс корня" + 1 == 3 + 1 == <strong>4</strong></p><br/>
+<p>Соответственно что бы получить, удалить элемент по индексу требуется время <strong>O(log n)</strong>, поскольку что бы получить нужный элемент мы должны сначала его найти (спуститься от корня до этого элемента).</p><br/>
+<h2 id="glubina">Глубина</h2><br/>
+<p>На основе веса так же можно вычислить и глубину дерева. Необходимую для балансировки.<br/>
+Для этого вес текущего узла надо округлить до первого числа в степени 2 которое больше или ровно данному весу и взять от него двоичный логарифм. Таким образом мы получим глубину дерева, при условии что оно сбалансировано. Дерево балансируется после вставки нового элемента. Теорию про то как балансировать деревья приводить не буду. В исходных кодах представлена функция балансировки.</p><br/>
+<p>Код приведения веса к глубине.</p><br/>
+<source lang="cpp">/*
+ * Возвращает первое число в степени 2, которое больше или ровно x
+ */
+uint64_t bntree::cpl2(uint64_t x) {
+    x = x - 1;
+    x = x | (x &gt;&gt; 1);
+    x = x | (x &gt;&gt; 2);
+    x = x | (x &gt;&gt; 4);
+    x = x | (x &gt;&gt; 8);
+    x = x | (x &gt;&gt; 16);
+    x = x | (x &gt;&gt; 32);
+
+    return x + 1;
+}
+
+/*
+ * Двоичный логарифм от числа
+ */
+long bntree::ilog2(long d) {
+    int result;
+    std::frexp(d, &amp;result);
+    return result - 1;
+}
+
+/*
+ * Вес к глубине
+ */
+uint64_t bntree::weight_to_depth(node_t *p) {
+    if (p == NULL) {
+        return 0;
+    }
+
+    if (p-&gt;weight == 1) {
+        return 1;
+    } else if (p-&gt;weight == 2) {
+        return 2;
+    }
+
+    return this-&gt;ilog2(this-&gt;cpl2(p-&gt;weight));
+}</source><br/>
+<h2 id="itogi">Итоги</h2><br/>
+<ul>
+<li>вставка нового элемента происходит за <strong>O(log n)</strong></li>
+<li>удаление элемента по порядковому номеру происходит за <strong>O(log n)</strong></li>
+<li>получение элемента по порядковому номеру происходит за <strong>O(log n)</strong></li>
+</ul><br/>
+<p>Скоростью <strong>O(log n)</strong> платим за то, что все данные хранятся в сортированном виде. </p><br/>
+<p>Где может пригодиться такая структура — не знаю. Просто задачка, что бы еще раз разобраться как работают деревья. Спасибо за внимание.</p><br/>
+<h2 id="ssylki">Ссылки</h2><br/>
+<ul>
+<li><a href="https://github.com/dvjdjvu/bntree" rel="nofollow">Исходный код дерева</a></li>
+</ul><br/>
+<p>В проекте содержатся тестовые данные для проверки скорости работы. Дерево заполняется <strong>1000000</strong> элементов. И происходит последовательное удаление, вставка и получение элементов <strong>1000000</strong> раз. То есть <strong>3000000</strong> операций. Результат оказался вполне неплохим ~ 8 секунд.</p></div></div></div> <div class="v-portal" style="display:none;"></div></div> <!-- --> <!-- --></div>

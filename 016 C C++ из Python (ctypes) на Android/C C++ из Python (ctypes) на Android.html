@@ -1,0 +1,594 @@
+<div class="tm-article-body" data-gallery-root="" lang="ru"><div></div> <div id="post-content-body"><div><div class="article-formatted-body article-formatted-body article-formatted-body_version-1"><div xmlns="http://www.w3.org/1999/xhtml"><div style="text-align:center;"><img alt="main" data-blurred="true" data-src="https://habrastorage.org/webt/yj/-c/sm/yj-csmwltho22f1-38_w8exbryu.jpeg" src="https://habrastorage.org/r/w780q1/webt/yj/-c/sm/yj-csmwltho22f1-38_w8exbryu.jpeg" width="500"/></div><br/>
+<p>Ранее я писал статью <a href="https://habr.com/ru/post/466499/">C/C++ из Python (ctypes)</a>, в ней описывается процесс запуска на <strong>Linux</strong>. На этот раз мне понадобилось повторить это уже на <strong>Android</strong>. В этой статье речь пойдет о сборке, необходимых инструментах, механизмах отладки и установки.</p><a name="habracut"></a><br/>
+<p>Код на <strong>C/C++</strong> ни каких изменений не претерпел. Подробнее ознакомиться с описанием кода можно по ссылке на статью приведенной в начале данного материала. </p><br/>
+<h2 id="c">C</h2><br/>
+<p>test.c:</p><br/>
+<source lang="cpp">#include "test.h"
+
+int a = 5;
+double b = 5.12345;
+char c = 'X';
+
+int 
+func_ret_int(int val) { 
+    return val;
+} 
+
+double 
+func_ret_double(double val) { 
+    return val;
+} 
+
+char *
+func_ret_str(char *val) { 
+    return val;
+} 
+
+char
+func_many_args(int val1, double val2, char val3, short val4) { 
+    return val3;
+} 
+
+test_st_t *
+func_ret_struct(test_st_t *test_st) {         
+    return test_st;
+} 
+</source><br/>
+<p>test.h:</p><br/>
+<source lang="cpp">#ifndef _TEST_H_
+#define _TEST_H_
+
+#ifdef  __cplusplus
+extern "C" {
+#endif
+
+typedef struct test_st_s test_st_t;
+
+extern int a;
+extern double b;
+extern char c;
+
+int func_ret_int(int val);
+double func_ret_double(double val);
+char *func_ret_str(char *val);
+char func_many_args(int val1, double val2, char val3, short val4);
+test_st_t *func_ret_struct(test_st_t *test_st);
+
+struct test_st_s {
+    int val1;
+    double val2;
+    char val3;
+};
+
+#ifdef  __cplusplus
+}
+#endif
+
+#endif  /* _TEST_H_ */</source><br/>
+<p>Процесс компиляции претерпел изменения, теперь нам понадобится <strong>arm-linux-gnueabi-gcc</strong>.</p><br/>
+<p>Как компилировать :</p><br/>
+<h4 id="linux-gnu-gcc">linux-gnu-gcc</h4><br/>
+<source lang="bash">aarch64-linux-gnu-gcc -c -Wl,-hash-style=sysv -g -O2 -march=armv8-a -fPIC -I./src/c  -o ./objs/test.o ./src/c/test.c
+aarch64-linux-gnu-gcc -Wl,-hash-style=sysv -g -O2 -march=armv8-a -shared -o ./objs/libtest.so ./objs/test.o
+aarch64-linux-gnu-strip --strip-unneeded ./objs/libtestpp.so</source><br/>
+<p>Флаг <strong>-march=armv8-a</strong> определяет архитектуру. Но особую важность представляют собой два флага <strong>-Wl, -hash-style=sysv</strong>, дело в том что компилятор по умолчанию компилирует с флагом <strong>-hash-style=gnu</strong>. Но такой формат hash таблицы не нравится android:</p><br/>
+<source lang="bash">I/python  (13157): dlopen failed: empty/missing DT_HASH in "libtest.so" (built with --hash-style=gnu?)</source><br/>
+<p>Без <strong>Wl</strong> тоже ничего работать не будет, т.к. компоновщик соберет все с -hash-style=gnu. Пишут, что еще подойдет <strong>hash-style=both</strong>, но я не проверял.</p><br/>
+<p>Для архитектуры <strong>armv7-a</strong> компилятор <strong>arm-linux-gnueabi-gcc</strong>. </p><br/>
+<p>При использовании aarch64-linux-gnu-gcc/arm-linux-gnueabi-gcc <strong>нельзя</strong> использовать <strong>printf</strong>, в разделе проблемы написано почему.</p><br/>
+<h4 id="clang">clang</h4><br/>
+<source lang="bash">$ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/clang -c -target aarch64-linux-android21 -fPIC -I./src/c  -o ./objs/test.o ./src/c/test.c
+$ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/clang -target aarch64-linux-android21 -shared -o ./objs/libtest.so ./objs/test.o
+$ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip --strip-unneeded ./objs/libtest.so</source><br/>
+<p><em>$ANDROID_NDK</em> использую от <strong>buildozer</strong>-а:</p><br/>
+<source lang="bash">~/.buildozer/android/platform/android-ndk-r19c/</source><br/>
+<p>На этом работа с библиотекой на C закончена. </p><br/>
+<h2 id="c-1">C++</h2><br/>
+<p>test.cpp:</p><br/>
+<source lang="cpp">#include "test.hpp"
+
+/**
+ * Методы класса
+ **/
+std::string test::ret_str(std::string val) {
+    std::cout &lt;&lt; "C get ret_str: " &lt;&lt; val &lt;&lt; std::endl;
+    return val;
+}
+
+int test::ret_int(int val) {
+    std::cout &lt;&lt; "C get ret_int: " &lt;&lt; val &lt;&lt; std::endl;
+    return val;
+}
+
+double test::ret_double(double val) {
+    std::cout &lt;&lt; "C get ret_double: " &lt;&lt; val &lt;&lt; std::endl;
+    return val;
+}
+
+/**
+ * Обвязка C для методов класса C++
+ **/
+
+// Создаем класс test, и получаем указатель на него.
+test *test_new() {
+    return new test();
+}
+
+// Удаляем класс test.
+void test_del(test *test) {
+    delete test;
+}
+
+/*
+ * Вызов методов класса.
+ */
+
+// Обертка над методом ret_str
+char *test_ret_str(test *test, char *val) {
+    // char * к std::string
+    std::string str = test-&gt;ret_str(std::string(val));
+
+    // std::string к char *
+    char *ret = new char[str.length() + 1];
+    strcpy(ret, str.c_str());
+
+    return ret;
+}
+
+// Обертка над методом ret_int
+int test_ret_int(test *test, int val) {
+    return test-&gt;ret_int(val);
+}
+
+// Обертка над методом ret_double
+double test_ret_double(test *test, double val) {
+    return test-&gt;ret_double(val);
+}
+
+/*
+ * Получение переменных класса.
+ */
+
+// Обертка для получения a
+int test_get_a(test *test) {
+    return test-&gt;a;
+}
+
+// Обертка для получения b
+double test_get_b(test *test) {
+    return test-&gt;b;
+}
+
+// Обертка для получения c
+char test_get_c(test *test) {
+    return test-&gt;c;
+}
+</source><br/>
+<p>test.hpp:</p><br/>
+<source lang="cpp">#ifndef _TEST_HPP_
+#define _TEST_HPP_
+
+#include &lt;iostream&gt;
+#include &lt;string&gt;
+
+class test {
+public:
+    int a = 5;
+    double b = 5.12345;
+    char c = 'X';
+
+    std::string ret_str(std::string val);
+    int ret_int(int val);
+    double ret_double(double val);
+};
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+    test *test_new();
+    void test_del(test *test);
+    char *test_ret_str(test *test, char *val);
+    int test_ret_int(test *test, int val);
+    double test_ret_double(test *test, double val);
+
+    int test_get_a(test *test);
+    double test_get_b(test *test);
+    char test_get_c(test *test);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif</source><br/>
+<p>Как компилировать :</p><br/>
+<h4 id="clang-1">clang++</h4><br/>
+<source lang="bash">$ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++ -c -target aarch64-linux-android21 -std=c++17 -stdlib=libc++ -fPIC -I./src/c  -o ./objs/test.pp.o ./src/c/test.cpp
+$ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++ -target aarch64-linux-android21 -std=c++17 -stdlib=libc++ -shared -o ./objs/libtestpp.so ./objs/test.pp.o
+$ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip --strip-unneeded ./objs/libtestpp.so</source><br/>
+<p>Для С++ понадобится <a href="https://github.com/urho3d/android-ndk/tree/master/sources/cxx-stl/llvm-libc%2B%2B/libs" rel="nofollow noopener noreferrer">libc++_shared.so</a>, она уже скомпилирована для нас.</p><br/>
+<p>Вот и все, не забудем скопировать <strong>.so</strong> файлы в папку проекта kivy.</p><br/>
+<h2 id="problemy-sc">Проблемы С/C++</h2><br/>
+<ul>
+<li>На aarch64-linux-gnu-gcc/arm-linux-gnueabi-gсс ругается на <strong>printf</strong>, для его работы пересобрал <strong>libc.so.6</strong>. Но все равно не заработало из-за зависимости на <strong>ld-linux-aarch64.so.1</strong>, которую <strong>ни как</strong> не смог подключить к проекту.</li>
+<li>Ни как не получилось заставить <strong>C++</strong> работать на aarch64-linux-gnu-g++/arm-linux-gnueabi-g++, только на <strong>clang++</strong> из <strong>NDK</strong>. Из-за того что:</li>
+</ul><br/>
+<source lang="bash">I/python  (13637):  OSError: dlopen failed: empty/missing DT_HASH in "libstdc++.so.6" (built with --hash-style=gnu?)</source><br/>
+<p>libstdc++.so.6 не стал пытаться собирать после неудачи с libc.so.6 и т.к. на clang++ заработало.</p><br/>
+<h2 id="glibc">GLIBC</h2><br/>
+<p>Как собрать glibc с помощью aarch64-linux-gnu-gcc/g++ под armv8-a. Мне это ни как не помогло, но опишу процесс на всякий случай т.к. потратил на него много времени.</p><br/>
+<source lang="bash">git clone git://sourceware.org/git/glibc.git
+cd glibc
+mkdir build
+cd build
+export glibc_install="$(pwd)/install"
+LDFLAGS="-Wl,-hash-style=sysv -march=armv8-a" ../configure --host=aarch64-linux-gnu --prefix "$glibc_install"
+make -j 4
+make install -j 4</source><br/>
+<p>Наши библиотеки в: <strong>glibc/build/install/lib</strong></p><br/>
+<h2 id="python">Python</h2><br/>
+<p>Здесь нам понадобится фреймворк <strong>Kivy</strong> и <strong>buildozer</strong> — утилита для создания apk пакетов. Установку и настройку проводил по статье: <a href="https://habr.com/ru/post/479236/">Kivy. Сборка пакетов под Android и никакой магии</a></p><br/>
+<h3 id="ustanovka-kivy--buildozer">Установка kivy &amp; buildozer</h3><br/>
+<source lang="bash">sudo pip3 install kivy
+sudo pip3 install buildozer</source><br/>
+<p>Установив kivy и buildozer приступим к созданию тестовой программы. Создадим папку под нее:</p><br/>
+<source lang="bash">mkdir android_python
+cd android_python</source><br/>
+<p>Теперь создадим <strong>main.py</strong>, это точка запуска нашей программы.</p><br/>
+<source lang="bash">touch main.py</source><br/>
+<p>И заполним его:</p><br/>
+<source lang="python">#!/usr/bin/python3
+#-*- coding: utf-8 -*-
+
+import os
+import sys
+import ctypes
+
+import kivy
+kivy.require("1.9.1")
+from kivy.app import App
+from kivy.uix.button import Button
+
+# class in which we are creating the button
+class ButtonApp(App):
+
+    def build(self):
+        # use a (r, g, b, a) tuple
+        btn = Button(text ="Push Me !",
+                   font_size ="20sp",
+                   background_color = (1, 1, 1, 1),
+                   color = (1, 1, 1, 1),
+                   size_hint = (.2, .1),
+                   pos_hint = {'x':.4, 'y':.45})
+
+        # bind() use to bind the button to function callback
+        btn.bind(on_press = self.callback)
+        return btn
+
+    # callback function tells when button pressed
+    def callback(self, event):
+        exit(0)
+
+##
+#  Старт.
+##
+if __name__ == "__main__":
+
+    test = None
+    # Загрузка библиотеки
+    try:
+        test = ctypes.CDLL('libtest.so')
+    except OSError as e:
+        print(str(e))
+        exit(0)
+
+    ###
+    ## C
+    ###
+
+    print("ctypes\n")
+    print("C\n")
+
+    ##
+    # Работа с функциями
+    ##
+
+    # Указываем, что функция возвращает int
+    test.func_ret_int.restype = ctypes.c_int
+    # Указываем, что функция принимает аргумент int
+    test.func_ret_int.argtypes = [ctypes.c_int, ]
+
+    # Указываем, что функция возвращает double
+    test.func_ret_double.restype = ctypes.c_double
+    # Указываем, что функция принимает аргумент double
+    test.func_ret_double.argtypes = [ctypes.c_double]
+
+    # Указываем, что функция возвращает char *
+    test.func_ret_str.restype = ctypes.c_char_p
+    # Указываем, что функция принимает аргумент char *
+    test.func_ret_str.argtypes = [ctypes.POINTER(ctypes.c_char), ]
+
+    # Указываем, что функция возвращает char
+    test.func_many_args.restype = ctypes.c_char
+    # Указываем, что функция принимает аргументы int, double. char, short
+    test.func_many_args.argtypes = [ctypes.c_int, ctypes.c_double, ctypes.c_char, ctypes.c_short]
+
+    print('Работа с функциями:')
+    print('ret func_ret_int: ', test.func_ret_int(101))
+    print('ret func_ret_double: ', test.func_ret_double(12.123456789))
+    # Необходимо строку привести к массиву байтов, и массив байтов к строке.
+    print('ret func_ret_str: ', test.func_ret_str('Hello!'.encode('utf-8')).decode("utf-8"))
+    print('ret func_many_args: ', test.func_many_args(15, 18.1617, 'X'.encode('utf-8'), 32000).decode("utf-8"))
+
+    ##
+    # Работа с переменными
+    ##
+
+    print('\nРабота с переменными:')
+    # Указываем, что переменная типа int
+    a = ctypes.c_int.in_dll(test, "a")
+    print('ret a: ', a.value)
+
+    # Изменяем значение переменной.
+    a.value = 22
+    a = ctypes.c_int.in_dll(test, "a")
+    print('new a: ', a.value)
+
+    # Указываем, что переменная типа double
+    b = ctypes.c_double.in_dll(test, "b")
+    print('ret b: ', b.value)
+
+    # Указываем, что переменная типа char
+    c = ctypes.c_char.in_dll(test, "c")
+    print('ret c: ', c.value.decode("utf-8"))
+
+    ##
+    # Работа со структурами
+    ##
+
+    print('\nРабота со структурами:')
+
+    # Объявляем структуру в Python аналогичную в C
+    class test_st_t(ctypes.Structure):
+        _fields_ = [('val1', ctypes.c_int),
+                    ('val2', ctypes.c_double),
+                    ('val3', ctypes.c_char)]
+
+    # Указываем, что функция возвращает test_st_t *
+    test.func_ret_struct.restype = ctypes.POINTER(test_st_t)
+    # Указываем, что функция принимает аргумент void *
+    test.func_ret_struct.argtypes = [ctypes.c_void_p]
+
+    # Создаем структуру
+    test_st = test_st_t(19, 3.5, 'Z'.encode('utf-8'))
+
+    # Python None == Null C
+    # ret = test.func_ret_struct(None)
+    # print('ret func_ret_struct: ', ret) # Если передали None, то его и получим назад
+    ret = test.func_ret_struct(ctypes.byref(test_st))
+
+    # Полученные данные из C
+    print('ret val1 = {}\nret val2 = {}\nret val3 = {}'.format(ret.contents.val1, ret.contents.val2,
+                                                               ret.contents.val3.decode("utf-8")))
+
+    ###
+    ## C++
+    ###
+
+    start_time = time.time()
+
+    print("\n\nC++\n")
+
+    # Загрузка библиотеки
+    testpp = ctypes.CDLL('libs/libs_arm64_v8a/libtestpp.so')
+
+    # Указываем, что функция возвращает указатель
+    testpp.test_new.restype = ctypes.c_void_p
+    # Создание класса test
+    test = testpp.test_new()
+
+    ##
+    # Работа с методами
+    ##
+
+    # Указываем, что функция возвращает char *
+    testpp.test_ret_str.restype = ctypes.c_char_p
+    # Указываем, что функция принимает аргумент void * и char *
+    testpp.test_ret_str.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+
+    # Указываем, что функция возвращает int
+    testpp.test_ret_int.restype = ctypes.c_int
+    # Указываем, что функция принимает аргумент void * и int
+    testpp.test_ret_int.argtypes = [ctypes.c_void_p, ctypes.c_int]
+
+    # Указываем, что функция возвращает double
+    testpp.test_ret_double.restype = ctypes.c_double
+    # Указываем, что функция принимает аргумент void * и double
+    testpp.test_ret_double.argtypes = [ctypes.c_void_p, ctypes.c_double]
+
+    print('Работа с методами:')
+    # В качестве 1-ого аргумента передаем указатель на наш класс
+    print('ret test_ret_str: ', testpp.test_ret_str(test, 'Hello!'.encode('utf-8')).decode("utf-8"))
+    print('ret test_ret_int: ', testpp.test_ret_int(test, 123))
+    print('ret test_ret_double: ', testpp.test_ret_double(test, 9.87654321))
+
+    ##
+    # Работа с переменными
+    ##
+
+    # Указываем, что функция возвращает int
+    testpp.test_get_a.restype = ctypes.c_int
+    # Указываем, что функция принимает аргумент void *
+    testpp.test_get_a.argtypes = [ctypes.c_void_p]
+    # Указываем, что функция возвращает double
+    testpp.test_get_b.restype = ctypes.c_double
+    # Указываем, что функция принимает аргумент void *
+    testpp.test_get_b.argtypes = [ctypes.c_void_p]
+    # Указываем, что функция возвращает char
+    testpp.test_get_c.restype = ctypes.c_char
+    # Указываем, что функция принимает аргумент void *
+    testpp.test_get_c.argtypes = [ctypes.c_void_p]
+
+    print('\nРабота с переменными:')
+    print('ret test_get_a: ', testpp.test_get_a(test))
+    print('ret test_get_b: ', testpp.test_get_b(test))
+    print('ret test_get_c: ', testpp.test_get_c(test).decode("utf-8"))
+
+    # Указываем, что функция принимает аргумент void *
+    testpp.test_del.argtypes = [ctypes.c_void_p]
+    # Удаляем класс
+    testpp.test_del(test)
+
+    ButtonApp().run()</source><br/>
+<p>Здесь создается простая графическая программа с одной кнопкой при нажатии которой произойдет закрытие приложения. Основная задача статьи показать как запускать C библиотеки, результат работы увидим в консоли.</p><br/>
+<p>Так же нам понадобится файл спецификации buildozer, описывающий правила сборки пакета <strong>apk</strong>. Создаем его:</p><br/>
+<source lang="bash">touch buildozer.spec</source><br/>
+<p>Заполняем:</p><br/>
+<source lang="plaintext">[app]
+
+# (str) Title of your application
+title = KivyTest
+
+# (str) Package name
+package.name = kivy_test
+
+# (str) Package domain (needed for android/ios packaging)
+package.domain = com.heattheatr
+
+# (str) Source code where the main.py live
+source.dir = .
+
+# (list) Source files to include (let empty to include all the files)
+source.include_exts = py,png,jpg,jpeg,ttf,so,6
+
+# (list) Application version
+version = 0.0.1
+
+# (list) Application requirements
+# comma separated e.g. requirements = sqlite3,kivy
+requirements = python3, kivy==2.0.0
+
+# (str) Custom source folders for requirements
+# Sets custom source for any requirements with recipes
+# requirements.source.kivy = ../../kivy
+#requirements.source.libtest = lib/libtest
+
+# (str) Supported orientation (one of landscape, sensorLandscape, portrait or all)
+orientation = portrait
+
+# (bool) Indicate if the application should be fullscreen or not
+fullscreen = 1
+
+# (list) Permissions
+android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE
+
+# (int) Target Android API, should be as high as possible.
+android.api = 28
+
+# (int) Minimum API your APK will support.
+android.minapi = 21
+
+# (str) Android NDK version to use
+android.ndk = 19c
+
+# (bool) If True, then skip trying to update the Android sdk
+# This can be useful to avoid excess Internet downloads or save time
+# when an update is due and you just want to test/build your package
+android.skip_update = False
+
+# (bool) If True, then automatically accept SDK license
+# agreements. This is intended for automation only. If set to False,
+# the default, you will be shown the license when first running
+# buildozer.
+android.accept_sdk_license = True
+
+# (str) The Android arch to build for, choices: armeabi-v7a, arm64-v8a, x86, x86_64
+android.arch = arm64-v8a
+
+# (list) Android additionnal libraries to copy into libs/armeabi
+android.add_libs_arm64_v8a = /home/djvu/workspace/c_from_python/ctypes/src/python/android/libs/libs_arm64_v8a/*.*
+
+[buildozer]
+
+# (int) Log level (0 = error only, 1 = info, 2 = debug (with command output))
+log_level = 2
+
+# (int) Display warning if buildozer is run as root (0 = False, 1 = True)
+warn_on_root = 0
+
+# (str) Path to build artifact storage, absolute or relative to spec file
+build_dir = ./.buildozer
+
+# (str) Path to build output (i.e. .apk, .ipa) storage
+bin_dir = ./bin</source><br/>
+<p>Здесь выделю следующие поля:</p><br/>
+<ul>
+<li><strong>source.include_exts</strong> — файлы с перечисленными расширениями будут включены в проект.</li>
+<li><strong>requirements</strong> — список python модулей которые будут скачены через pip и включены в проект.</li>
+<li><strong>android.arch</strong> — архитектура под которую производится сборка</li>
+<li><strong>android.add_libs_arm64_v8a</strong> — папка с библиотеками под конкретную архитектуру, которые будут включены в проект. Под каждую архитектуру свой ключ:<br/>
+<ul>
+<li>android.add_libs_armeabi = libs/android/*.so</li>
+<li>android.add_libs_armeabi_v7a = libs/android-v7/*.so</li>
+<li>android.add_libs_arm64_v8a = libs/android-v8/*.so</li>
+<li>android.add_libs_x86 = libs/android-x86/*.so</li>
+<li>android.add_libs_mips = libs/android-mips/*.so</li>
+</ul></li>
+</ul><br/>
+<p>Данный buildozer.spec собирает приложения под архитектуру <strong>arm64-v8a</strong>.</p><br/>
+<p>Здесь у меня вопрос к <strong>знающим людям</strong>, с помощью <strong>android.add_libs_arm64_v8a = /home/djvu/workspace/c_from_python/ctypes/src/python/android/libs/libs_arm64_v8a/<em>.</em></strong> я ни как не смог добавить в apk пакет библиотеку <strong>libstdc++.so.6</strong>. Добавляются только с расширениями <strong>so</strong>. <strong>Подскажите как это сделать?</strong></p><br/>
+<p>Теперь соберем apk пакет:</p><br/>
+<source lang="bash">buildozer android debug</source><br/>
+<p>Операция очень долгая и растянется на несколько десятков минут. Так же потребуется порядка <strong>1.5 GB</strong> свободного места, т.к. buildozer подтянет все необходимые библиотеки для сборки.<br/>
+После удачного завершения в папке <strong>bin</strong> соберется пакет <strong>kivy_test-0.0.1-arm64-v8a-debug.apk</strong>.</p><br/>
+<h2 id="telefon">Телефон</h2><br/>
+<p>На телефоне нужно включить режим отладки по <strong>USB</strong> и разрешить установку через <strong>USB</strong>.<br/>
+Можно сбрасывать себе пакеты через <strong>telegram</strong> (так делал на телефоне со сломанным USB).</p><br/>
+<div style="text-align:center;"><img alt="main" data-blurred="true" data-src="https://habrastorage.org/webt/53/dg/bj/53dgbjcchbcypis05uzqdyi7n58.jpeg" src="https://habrastorage.org/r/w780q1/webt/53/dg/bj/53dgbjcchbcypis05uzqdyi7n58.jpeg" width="300"/></div><br/>
+<p>Установим на телефон через провод:</p><br/>
+<source lang="bash">adb install -r ./bin/kivy_test-*.apk</source><br/>
+<p>Убедимся что пакет установился и все наши библиотеки внутри:</p><br/>
+<source lang="bash">adb shell
+run-as com.heattheatr.kivy_test
+ls files/app/libs</source><br/>
+<p><img data-src="https://habrastorage.org/webt/xh/hn/yr/xhhnyrwgqaiqtjz_wmayytjs1u8.png" src="https://habrastorage.org/r/w1560/webt/xh/hn/yr/xhhnyrwgqaiqtjz_wmayytjs1u8.png"/></p><br/>
+<p>Находим приложение на телефоне:</p><br/>
+<div style="text-align:center;"><img alt="main" data-blurred="true" data-src="https://habrastorage.org/webt/rw/9v/wm/rw9vwmh-reotpkzhj9yjsw1hkpi.jpeg" src="https://habrastorage.org/r/w780q1/webt/rw/9v/wm/rw9vwmh-reotpkzhj9yjsw1hkpi.jpeg" width="300"/></div><br/>
+<p>Подключаемся к консоли телефона и мониторим работу приложения:</p><br/>
+<source lang="bash">adb logcat | grep python</source><br/>
+<p>Запускаем и получаем следующее — <strong>C/C++</strong> отработал без проблем:</p><br/>
+<source lang="bash">I/python  (15497): ctypes
+I/python  (15497): C
+I/python  (15497): Работа с функциями:
+I/python  (15497): ret func_ret_int:  101
+I/python  (15497): ret func_ret_double:  12.123456789
+I/python  (15497): ret func_ret_str:  Hello!
+I/python  (15497): ret func_many_args:  X
+I/python  (15497): Работа с переменными:
+I/python  (15497): ret a:  5
+I/python  (15497): new a:  22
+I/python  (15497): ret b:  5.12345
+I/python  (15497): ret c:  X
+I/python  (15497): Работа со структурами:
+I/python  (15497): ret val1 = 19
+I/python  (15497): ret val2 = 3.5
+I/python  (15497): ret val3 = Z
+I/python  (15497): C++
+I/python  (15497): Работа с методами:
+I/python  (15497): ret test_ret_str:  Hello!
+I/python  (15497): ret test_ret_int:  123
+I/python  (15497): ret test_ret_double:  9.87654321
+I/python  (15497): Работа с переменными:
+I/python  (15497): ret test_get_a:  5
+I/python  (15497): ret test_get_b:  5.12345
+I/python  (15497): ret test_get_c:  X</source><br/>
+<p>На экране телефона видим следующую картинку:</p><br/>
+<div style="text-align:center;"><img alt="main" data-blurred="true" data-src="https://habrastorage.org/webt/dv/xg/qj/dvxgqjdrunzpibh8ormbrhbe6l4.jpeg" src="https://habrastorage.org/r/w780q1/webt/dv/xg/qj/dvxgqjdrunzpibh8ormbrhbe6l4.jpeg" width="300"/></div><br/>
+<p>Все отработало как надо. Нажатие на кнопку закрывает приложение. Больше оно ни чего не умеет делать ;)</p><br/>
+<p>Спасибо за внимание.</p><br/>
+<h2 id="ssylki">Ссылки</h2><br/>
+<ul>
+<li><a href="https://github.com/dvjdjvu/c_from_python" rel="nofollow noopener noreferrer">Исходные коды примеров</a></li>
+<li>C/C++ из Python <a href="https://habr.com/ru/post/466499/"><strong>ctypes</strong></a></li>
+<li><a href="https://habr.com/ru/post/479236/">Kivy. Сборка пакетов под Android и никакой магии</a></li>
+</ul></div></div></div> <div class="v-portal" style="display:none;"></div></div> <!-- --> <!-- --></div>

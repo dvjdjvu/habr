@@ -1,0 +1,191 @@
+<div class="tm-article-body" data-gallery-root="" lang="ru"><div></div> <div id="post-content-body"><div><div class="article-formatted-body article-formatted-body article-formatted-body_version-1"><div xmlns="http://www.w3.org/1999/xhtml"><div style="text-align:center;"><img alt="main" data-src="https://habrastorage.org/webt/jf/9n/pl/jf9nplvejlhxgattedsrk33eyye.png" src="https://habrastorage.org/r/w1560/webt/jf/9n/pl/jf9nplvejlhxgattedsrk33eyye.png" width="800"/></div><br/>
+<p>Эта статья продолжение статьи <a href="https://habr.com/ru/post/533040/">HDB++ TANGO Archiving System</a>, в которой рассказывалось об архитектуре и о том как настроить архивацию. Здесь речь пойдет о том как поднять и настроить docker в котором будет работать база архивирования.</p><a name="habracut"></a><br/>
+<h2 id="docker">docker</h2><br/>
+<p>Скачиваем и запускаем docker:</p><br/>
+<source lang="bash">docker pull registry.gitlab.com/s2innovation/tangobox-docker/tangobox-hdbpp:latest
+
+docker run -dit --name tangobox-hdbpp -h tangobox-hdbpp --network tango_nw --ip 172.18.0.7 --add-host scsc:172.18.0.1 -e TANGO_HOST=scsc:10000 --restart unless-stopped registry.gitlab.com/s2innovation/tangobox-docker/tangobox-hdbpp:latest</source><br/>
+<h2 id="sozdanie-i-nastroyka-device-server-ov-arhivacii">Создание и настройка Device Server-ов архивации</h2><br/>
+<p>Запускаем <strong>jive</strong>, и создаем два сервера <strong>hdb++cm-srv</strong> и <strong>hdb++es-srv</strong>:</p><br/>
+<source lang="bash">jive</source><br/>
+<p><em>Edit-&gt;Create Server</em></p><br/>
+<div class="scrollable-table"><table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Server</td>
+<td>hdb++cm-srv/1</td>
+</tr>
+<tr>
+<td>Class</td>
+<td>HdbConfigurationManager</td>
+</tr>
+<tr>
+<td>Devices</td>
+<td>archiving/hdbpp/configurationmanager.1</td>
+</tr>
+</tbody>
+</table></div><br/>
+<div class="scrollable-table"><table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Server</td>
+<td>hdb++es-srv/1</td>
+</tr>
+<tr>
+<td>Class</td>
+<td>HdbEventSubscriber</td>
+</tr>
+<tr>
+<td>Devices</td>
+<td>archiving/hdbpp/eventsubscriber.1</td>
+</tr>
+</tbody>
+</table></div><br/>
+<p><img data-blurred="true" data-src="https://habrastorage.org/webt/gt/pz/py/gtpzpywzgpbatm_xdzuwjtazauw.jpeg" src="https://habrastorage.org/r/w780q1/webt/gt/pz/py/gtpzpywzgpbatm_xdzuwjtazauw.jpeg"/></p><br/>
+<p><img data-blurred="true" data-src="https://habrastorage.org/webt/qu/sa/1e/qusa1ezysmtnuwhcnvbomnqqmzk.jpeg" src="https://habrastorage.org/r/w780q1/webt/qu/sa/1e/qusa1ezysmtnuwhcnvbomnqqmzk.jpeg"/></p><br/>
+<h3 id="zapolnyaem-properties">Заполняем properties</h3><br/>
+<p>Во вкладке <strong>Server</strong> заполняем <strong>properties</strong> у <strong>hdb++cm-srv</strong>:</p><br/>
+<div class="scrollable-table"><table>
+<thead>
+<tr>
+<th>Property name</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ArchiverList</td>
+<td>tango://tangobox:10000/archiving/hdbpp/eventsubscriber.1</td>
+</tr>
+<tr>
+<td>__SubDevices</td>
+<td>tango://tangobox:10000/archiving/hdbpp/eventsubscriber.1</td>
+</tr>
+</tbody>
+</table></div><br/>
+<p><img data-blurred="true" data-src="https://habrastorage.org/webt/i6/kg/di/i6kgdiewz-j_cupuxdzywn1dfny.jpeg" src="https://habrastorage.org/r/w780q1/webt/i6/kg/di/i6kgdiewz-j_cupuxdzywn1dfny.jpeg"/></p><br/>
+<p>Далее переходим во вкладку <strong>Class</strong> и заполняем <strong>properties</strong> у <strong>HdbConfigurationManager</strong>:</p><br/>
+<div class="scrollable-table"><table>
+<thead>
+<tr>
+<th>Property name</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>InheritedFrom</td>
+<td>TANGO_BASE_CLASS</td>
+</tr>
+<tr>
+<td>LibConfiguration</td>
+<td><ul>
+<li>host=tangobox-hdbpp</li>
+<li>user=hdbpprw</li>
+<li>dbname=hdbpp</li>
+<li>port=3306</li>
+<li>libname=libhdb++mysql.so.6</li>
+</ul></td>
+</tr>
+<tr>
+<td>MaxSearchSize</td>
+<td>2000</td>
+</tr>
+<tr>
+<td>ProjectTitle</td>
+<td>Hdb++ configuration manager</td>
+</tr>
+</tbody>
+</table></div><br/>
+<p><img data-blurred="true" data-src="https://habrastorage.org/webt/jf/dy/fo/jfdyfopvej92pf-fad8jtshft5y.jpeg" src="https://habrastorage.org/r/w780q1/webt/jf/dy/fo/jfdyfopvej92pf-fad8jtshft5y.jpeg"/></p><br/>
+<p>И у <strong>HdbEventSubscriber</strong>:</p><br/>
+<div class="scrollable-table"><table>
+<thead>
+<tr>
+<th>Property name</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CheckPeriodicTime</td>
+<td>150</td>
+</tr>
+<tr>
+<td>DefaultContext</td>
+<td>ALWAYS</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>This class is able to subscribe on archive events and store value in Historical DB</td>
+</tr>
+<tr>
+<td>HdbppContext</td>
+<td>0:ALWAYS 1:RUN 2:SHUTDOWN 3:SERVICE</td>
+</tr>
+<tr>
+<td>InheritedFrom</td>
+<td>TANGO_BASE_CLASS</td>
+</tr>
+<tr>
+<td>LibConfiguration</td>
+<td><ul>
+<li>host=tangobox-hdbpp</li>
+<li>user=hdbpprw</li>
+<li>password=hdbpprw</li>
+<li>dbname=hdbpp</li>
+<li>port=3306</li>
+<li>libname=libhdb++mysql.so.6</li>
+</ul></td>
+</tr>
+<tr>
+<td>PollingThreadPeriod</td>
+<td>60</td>
+</tr>
+<tr>
+<td>ProjectTitle</td>
+<td>Tango Device Server</td>
+</tr>
+<tr>
+<td>StartArchivingAtStart</td>
+<td>false</td>
+</tr>
+<tr>
+<td>StatisticsTimeWindow</td>
+<td>60</td>
+</tr>
+<tr>
+<td>SubscribeRetryPeriod</td>
+<td>150</td>
+</tr>
+</tbody>
+</table></div><br/>
+<p><img data-blurred="true" data-src="https://habrastorage.org/webt/sq/ks/oo/sqksoowpgytzwdmg9nmt-omzvvs.jpeg" src="https://habrastorage.org/r/w780q1/webt/sq/ks/oo/sqksoowpgytzwdmg9nmt-omzvvs.jpeg"/></p><br/>
+<h2 id="astor">Astor</h2><br/>
+<p>Запускаем <strong>astor</strong>:</p><br/>
+<source lang="bash">astor</source><br/>
+<p><img data-blurred="true" data-src="https://habrastorage.org/webt/tr/ti/mz/trtimz26qfmnjh-5_rrrjtalow0.jpeg" src="https://habrastorage.org/r/w780q1/webt/tr/ti/mz/trtimz26qfmnjh-5_rrrjtalow0.jpeg"/></p><br/>
+<p><img data-blurred="true" data-src="https://habrastorage.org/webt/cv/hf/pc/cvhfpc05arozrce-ydkhkxmmpdo.jpeg" src="https://habrastorage.org/r/w780q1/webt/cv/hf/pc/cvhfpc05arozrce-ydkhkxmmpdo.jpeg"/></p><br/>
+<p>Если все прошло успешно, то мы увидим что <strong>tangobox-hdbpp</strong> горит зеленым. docker запустил внутри себя процесс <strong>Starter</strong>, который отвечает за подключение к <strong>astor</strong> из docker-а в основную систему.</p><br/>
+<source lang="bash">/usr/local/bin/Starter</source><br/>
+<p>Если что-то пошло не так, то нужно смотреть в docker-е почему он не запустился.</p><br/>
+<p>Так же нужно убедиться, что запускаются:</p><br/>
+<source lang="bash">/usr/local/bin/hdb++es-srv
+/usr/local/bin/hdb++cm-srv</source><br/>
+<p><img data-blurred="true" data-src="https://habrastorage.org/webt/r8/7n/6_/r87n6_h5ain5louen9jqex1fsrw.jpeg" src="https://habrastorage.org/r/w780q1/webt/r8/7n/6_/r87n6_h5ain5louen9jqex1fsrw.jpeg"/></p><br/>
+<p>Далее 2-ым щелчком мыши подключаемся к <strong>tangobox-hdbpp</strong>, жмем кнопку <strong>Start New</strong> и добавляем 2-ва Device Server-а созданные нами ранее. Порядок запуска задаем как на картинке.</p><br/>
+<p><img data-blurred="true" data-src="https://habrastorage.org/webt/xn/ps/ao/xnpsaob7do2k6erhkuy7kgzh7wy.jpeg" src="https://habrastorage.org/r/w780q1/webt/xn/ps/ao/xnpsaob7do2k6erhkuy7kgzh7wy.jpeg"/></p><br/>
+<p><img data-blurred="true" data-src="https://habrastorage.org/webt/dl/9t/a8/dl9ta8i2sssubv0reufysmgrjf8.jpeg" src="https://habrastorage.org/r/w780q1/webt/dl/9t/a8/dl9ta8i2sssubv0reufysmgrjf8.jpeg"/></p><br/>
+<p>Спасибо за внимание.</p></div></div></div> <div class="v-portal" style="display:none;"></div></div> <!-- --> <!-- --></div>

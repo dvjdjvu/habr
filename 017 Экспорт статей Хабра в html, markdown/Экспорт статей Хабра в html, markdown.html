@@ -1,0 +1,61 @@
+<div class="tm-article-body" data-gallery-root="" lang="ru"><div></div> <div id="post-content-body"><div><div class="article-formatted-body article-formatted-body article-formatted-body_version-1"><div xmlns="http://www.w3.org/1999/xhtml"><p><img alt="image" data-src="https://habrastorage.org/webt/qj/fg/xs/qjfgxsxydopwlarzimlvqus-mwq.png" src="https://habrastorage.org/r/w1560/webt/qj/fg/xs/qjfgxsxydopwlarzimlvqus-mwq.png"/></p><br/>
+<p>До меня было написано 4 статьи по экспорту статей с хабра в <strong>FB2</strong> и <strong>pdf</strong>:</p><br/>
+<ul>
+<li><a href="https://habr.com/ru/post/116982/">Экспорт избранного Хабра в FB2</a></li>
+<li><a href="https://habr.com/ru/post/170755/">Экспорт избранного Хабра в FB2 — скоростная PHP-версия</a></li>
+<li><a href="https://habr.com/ru/post/174649/">Экспорт Хабра в FB2</a></li>
+<li><a href="https://habr.com/ru/post/208802/">Экспорт Избранного на Хабре в PDF</a></li>
+</ul><br/>
+<p>Я захотел получить исходники своих статей. <a name="habracut"></a> Поскольку для написания на хабре пользуюсь старым редактором и пишу в <strong>markdown</strong>, то и основная цель была получить исходник markdown. HTML пошел прицепом, т.к. статьи с хабра получаю в нем, а затем с помощью библиотеки <a href="https://github.com/matthewwithanm/python-markdownify" rel="nofollow noopener noreferrer">markdownify</a> и некоторых танцев с бубном получаю md.</p><br/>
+<h2 id="kak-polzovatsya">Как пользоваться</h2><br/>
+<p>Скрипт написан на python3, скачиваем с github, устанавливаем зависимости и запускаем:</p><br/>
+<source lang="bash">git clone https://github.com/dvjdjvu/habrArticleSrcDownloader
+cd habrArticleSrcDownloader
+apt-get install python3-lxml libomp-dev
+pip3 install -r requirements.txt</source><br/>
+<p>Скачиваем статьи пользователя:</p><br/>
+<source lang="bash">./src/main.py -u jessy_james</source><br/>
+<p>Скачиваем закладки пользователя:</p><br/>
+<source lang="bash">./src/main.py -f jessy_james</source><br/>
+<p>Скачиваем одиночную статью:</p><br/>
+<source lang="bash">./src/main.py -s 665634</source><br/>
+<p>Вместо <em>jessy_james</em> подставить имя нужного пользователя или вместо <em>665634</em> подставить <strong>id</strong> нужной статьи. Взять его можно из ссылки профиля:</p><br/>
+<img data-src="https://habrastorage.org/webt/4e/ur/ml/4eurmlni9b4f15fuqpuz4wrolmq.png" src="https://habrastorage.org/r/w1560/webt/4e/ur/ml/4eurmlni9b4f15fuqpuz4wrolmq.png"/><br/>
+<p>Или ссылки на статью:</p><br/>
+<img data-src="https://habrastorage.org/webt/vd/45/s-/vd45s-gggetrnpbkq9czftttz5o.png" src="https://habrastorage.org/r/w1560/webt/vd/45/s-/vd45s-gggetrnpbkq9czftttz5o.png"/><br/>
+<p>После запуска получаем такую картину:</p><br/>
+<source lang="bash">./src/main.py -u jessy_james
+[info]: Скачивается: C/C++ из Python (ctypes) на Android
+[info]: Директория: 16 C C++ из Python (ctypes) на Android создана
+[info]: Директория: picture создана
+[info]: Статья: C C++ из Python (ctypes) на Android сохранена
+[info]: Скачивается: Своя docking station для ноутбука
+[info]: Директория: 15 Своя docking station для ноутбука создана
+[info]: Директория: picture создана
+[info]: Статья: Своя docking station для ноутбука сохранена
+[info]: Скачивается: Tango Controls hdbpp-docker
+[info]: Директория: 14 Tango Controls hdbpp-docker создана
+[info]: Директория: picture создана
+
+...
+
+[info]: Скачивается: Игрушка ГАЗ-66 на пульте управления. Часть 2
+[info]: Директория: 2 Игрушка ГАЗ-66 на пульте управления. Часть 2 создана
+[info]: Директория: picture создана
+[info]: Статья: Игрушка ГАЗ-66 на пульте управления. Часть 2 сохранена
+[info]: Скачивается: Игрушка ГАЗ-66 на пульте управления. Часть 1
+[info]: Директория: 1 Игрушка ГАЗ-66 на пульте управления. Часть 1 создана
+[info]: Директория: picture создана
+[info]: Статья: Игрушка ГАЗ-66 на пульте управления. Часть 1 сохранена</source><br/>
+<p>Статьи скачиваются от последней написанной к первой. Нумерация будет в порядки написания или добавления в закладки.</p><br/>
+<p>Иерархия каталога будет такой:</p><br/>
+<img data-src="https://habrastorage.org/webt/jj/kv/ik/jjkvikxi-jyjozgmh0q0j-d_qyg.png" src="https://habrastorage.org/r/w1560/webt/jj/kv/ik/jjkvikxi-jyjozgmh0q0j-d_qyg.png"/><br/>
+<p>Создается папка <strong>article</strong>, <strong>favorites</strong> или <strong>singles</strong>, далее папка с именем пользователя, далее папки с названиями статей. В папке со статьей будет два файла (<strong>.md</strong> и <strong>.html</strong>) и папка с картинками статьи.</p><br/>
+<p>Смотрим что получилось, берем содержимое полученного файла markdown и вставляем в редактор статей:</p><br/>
+<p><img alt="image" data-src="https://habrastorage.org/webt/lo/ef/ba/loefbade5qz6a50a4tsuideypmo.png" src="https://habrastorage.org/r/w1560/webt/lo/ef/ba/loefbade5qz6a50a4tsuideypmo.png"/></p><br/>
+<p>Почти работает как я хотел ;), есть некоторые проблемы с отображением изображений (исходник html отображает правильнее). Постараюсь их исправить.</p><br/>
+<p>Спасибо за внимание.</p><br/>
+<h2 id="ssylki">Ссылки</h2><br/>
+<ul>
+<li><a href="https://github.com/dvjdjvu/habrArticleSrcDownloader" rel="nofollow noopener noreferrer">Исходный код скрипта</a></li>
+</ul></div></div></div> <div class="v-portal" style="display:none;"></div></div> <!-- --> <!-- --></div>

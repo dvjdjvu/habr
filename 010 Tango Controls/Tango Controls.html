@@ -1,0 +1,225 @@
+<div class="tm-article-body" data-gallery-root="" lang="ru"><div></div> <div id="post-content-body"><div><div class="article-formatted-body article-formatted-body article-formatted-body_version-1"><div xmlns="http://www.w3.org/1999/xhtml"><div style="text-align:center;"><img alt="main" data-src="https://habrastorage.org/webt/yw/uk/b4/ywukb4xd4bdxwnb1ns5gldo7f30.png" src="https://habrastorage.org/r/w1560/webt/yw/uk/b4/ywukb4xd4bdxwnb1ns5gldo7f30.png" width="800"/></div><br/>
+<h2 id="chto-takoe-tangohttpswwwtango-controlsorg">Что такое <a href="https://www.tango-controls.org/" rel="nofollow noopener noreferrer">TANGO</a>?</h2><br/>
+<p>Это система для управления различным оборудованием и программным обеспечением.<br/>
+TANGO поддерживает 4 платформы на данный момент: Linux, Windows NT, Solaris и HP-UX.<br/>
+Здесь будет описана работа с Linux(Ubuntu 18.04)</p><br/>
+<h2 id="dlya-chego-nuzhno">Для чего нужно?</h2><br/>
+<p>Упрощает работу с различным оборудованием и софтом.</p><br/>
+<ul>
+<li>Вам не нужно думать о том как хранить данные в БД, это уже сделано за Вас.</li>
+<li>Нужно только описать механизм опроса датчиков.</li>
+<li>Сводит весь Ваш код к одному стандарту.</li>
+</ul><a name="habracut"></a><br/>
+<h2 id="gde-vzyat">Где взять?</h2><br/>
+<ul>
+<li><a href="https://www.tango-controls.org/downloads/" rel="nofollow noopener noreferrer"><strong>исходники</strong></a></li>
+<li><a href="https://tango-controls.readthedocs.io/en/latest/installation/index.html" rel="nofollow noopener noreferrer"><strong>инструкция по установке</strong></a></li>
+<li><a href="https://tango-controls.readthedocs.io/en/latest/installation/virtualmachine.html" rel="nofollow noopener noreferrer"><strong>образ TangoBox на базе Ubuntu</strong></a></li>
+</ul><br/>
+<p>Из исходников не смог ее запустить, для работы использовал готовый образ TangoBox 9.3.<br/>
+В инструкции описано как ставить из пакетов.</p><br/>
+<h2 id="iz-chego-ona-sostoit">Из чего она состоит?</h2><br/>
+<ul>
+<li><strong>JIVE</strong> — служит для просмотра и редактирования базы данных TANGO.</li>
+<li><strong>POGO</strong> — генератор кода для серверов устройств TANGO.</li>
+<li><strong>Astor</strong> — программный менеджер для системы TANGO.</li>
+</ul><br/>
+<p>Нас будут интересовать только первые два компонента.</p><br/>
+<h2 id="podderzhivaemye-yazyki-programmirovaniya">Поддерживаемые языки программирования</h2><br/>
+<ul>
+<li><strong>C</strong></li>
+<li><strong>C++</strong></li>
+<li><strong>Java</strong></li>
+<li><strong>JavaScript</strong></li>
+<li><strong>Python</strong></li>
+<li><strong>Matlab</strong></li>
+<li><strong>LabVIEW</strong></li>
+</ul><br/>
+<p>Я работал с ней на python &amp; c++. Здесь в качестве примера будет использоваться c++.</p><br/>
+<p>Теперь перейдем к описанию как подключить устройство к TANGO и как с ним работать. В качестве примера будет взята плата <strong><em>GPS neo-6m-0-001</em></strong>:</p><br/>
+<p><img alt="image" data-blurred="true" data-src="https://habrastorage.org/webt/dw/0y/di/dw0ydivfn97k481ros5rxplg3oy.jpeg" src="https://habrastorage.org/r/w780q1/webt/dw/0y/di/dw0ydivfn97k481ros5rxplg3oy.jpeg"/></p><br/>
+<p>Как видно на картинке плату к ПК подключаем через UART CP2102. При подключении к ПК появляется устройство <strong>/dev/ttyUSB[0-N]</strong>, обычно /dev/ttyUSB0.</p><br/>
+<h2 id="pogo">POGO</h2><br/>
+<p>Теперь запустим <strong>pogo</strong>, и с генерируем скелет код для работы с нашей платой.</p><br/>
+<source lang="bash">pogo</source><br/>
+<p><img alt="image" data-blurred="true" data-src="https://habrastorage.org/webt/a5/_g/kj/a5_gkjpv3rpbi62yambp-2vkgx0.jpeg" src="https://habrastorage.org/r/w780q1/webt/a5/_g/kj/a5_gkjpv3rpbi62yambp-2vkgx0.jpeg"/></p><br/>
+<p>У меня уже был создан код, создадим его заново <em>File-&gt;New</em>.</p><br/>
+<p><img alt="image" data-blurred="true" data-src="https://habrastorage.org/webt/sx/p6/k-/sxp6k-6jfutggptvtxb7qjhucvc.jpeg" src="https://habrastorage.org/r/w780q1/webt/sx/p6/k-/sxp6k-6jfutggptvtxb7qjhucvc.jpeg"/></p><br/>
+<p>Получаем следующее:</p><br/>
+<p><img alt="image" data-blurred="true" data-src="https://habrastorage.org/webt/wc/t0/ss/wct0sst0gu49gw-xkczpuoejrt8.jpeg" src="https://habrastorage.org/r/w780q1/webt/wc/t0/ss/wct0sst0gu49gw-xkczpuoejrt8.jpeg"/></p><br/>
+<p>Наше устройство(под устройством в дальнейшем будет иметься ввиду программная часть) пустое и имеет две команды управления: <strong>State</strong> &amp; <strong>Status</strong>.</p><br/>
+<p>Его нужно заполнить необходимыми атрибутами: </p><br/>
+<p><strong>Device Property</strong> — значения по умолчанию которые передаем в устройство для его инициализации, для платы GPS нужно передать имя платы в системе <strong>com="/dev/ttyUSB0"</strong> и скорость com порта <strong>baudrade=9600</strong></p><br/>
+<p><strong>Commands</strong> — команды управления нашим устройством, им можно задать аргументы и возвращаемое значение.</p><br/>
+<ul>
+<li><strong>STATE</strong> — возвращает текущее состояние, из <strong>States</strong></li>
+<li><strong>STATUS</strong> — возвращает текущий статус, это строковое дополнение к <strong>STATE</strong></li>
+<li><strong>GPSArray</strong> — возвращает <strong>gps</strong> строку в виде <strong>DevVarCharArray</strong></li>
+</ul><br/>
+<p>Далее задаются атрибуты устройства которые можно читать/писать в/из него.<br/>
+<strong>Scalar Attributes</strong> — простые атрибуты (char, string, long и т.п.)<br/>
+<strong>Spectrum Attributes</strong> — одномерные массивы<br/>
+<strong>Image Attributes</strong> — двумерные массивы</p><br/>
+<p><strong>States</strong> — состояния в котором находится наше устройство.</p><br/>
+<ul>
+<li><strong>OPEN</strong> — устройство открыто.</li>
+<li><strong>CLOSE</strong> — устройство закрыто.</li>
+<li><strong>FAILT</strong> — ошибка.</li>
+<li><strong>ON</strong> — принимаем данные с устройства.</li>
+<li><strong>OFF</strong> — нет данных с устройства.</li>
+</ul><br/>
+<p>Пример добавления атрибута <strong>gps_string</strong>:</p><br/>
+<p><img alt="image" data-blurred="true" data-src="https://habrastorage.org/webt/4-/2s/f2/4-2sf2ywgzrpafgzcpfgpwkdchi.jpeg" src="https://habrastorage.org/r/w780q1/webt/4-/2s/f2/4-2sf2ywgzrpafgzcpfgpwkdchi.jpeg"/></p><br/>
+<p><strong>Polling period</strong> время в мс, как часто будет обновляться значение gps_string. Если время обновления не задать, то атрибут будет обновляться только по запросу.</p><br/>
+<p>Получилось:</p><br/>
+<p><img alt="image" data-blurred="true" data-src="https://habrastorage.org/webt/ci/gp/9q/cigp9qv82egfdtzzlkghvx-ack0.jpeg" src="https://habrastorage.org/r/w780q1/webt/ci/gp/9q/cigp9qv82egfdtzzlkghvx-ack0.jpeg"/></p><br/>
+<p>Теперь нужно с генерировать код <em>File-&gt;Generate</em></p><br/>
+<p><img alt="image" data-blurred="true" data-src="https://habrastorage.org/webt/nu/m7/6u/num76u0giqpc8vzbznow-pu7ryu.jpeg" src="https://habrastorage.org/r/w780q1/webt/nu/m7/6u/num76u0giqpc8vzbznow-pu7ryu.jpeg"/></p><br/>
+<p>По умолчанию Makefile не генерируется, в 1-ый раз нужно поставить галочку что бы его создать. Это сделано для того что бы внесенные в него правки не удалялись при новой генерации. Создав его единожды и настроив под свой проект(прописать ключи компиляции, доп. файлы) можно забыть про него.</p><br/>
+<p>Теперь переходим непосредственно к программированию. pogo с генерировал нам следующее:</p><br/>
+<p><img alt="image" data-blurred="true" data-src="https://habrastorage.org/webt/bg/id/er/bgiderec9ohjcrp0yrbjlpymleq.jpeg" src="https://habrastorage.org/r/w780q1/webt/bg/id/er/bgiderec9ohjcrp0yrbjlpymleq.jpeg"/></p><br/>
+<p>Нас будут интересовать NEO6M.cpp &amp; NEO6M.h. Рассмотрим для примера конструктор класса:</p><br/>
+<source lang="cpp">NEO6M::NEO6M(Tango::DeviceClass *cl, string &amp;s)
+ : TANGO_BASE_CLASS(cl, s.c_str())
+{
+    /*----- PROTECTED REGION ID(NEO6M::constructor_1) ENABLED START -----*/
+    init_device();
+
+    /*----- PROTECTED REGION END -----*/    //  NEO6M::constructor_1
+}</source><br/>
+<p>Что здесь есть и что здесь главное? В функции init_device() происходит выделение памяти для наших атрибутов: <strong>gps_string</strong> &amp; <strong>gps_array</strong>, но это не важно. <strong>Самое важное здесь</strong>, это комментарии:</p><br/>
+<source lang="cpp">/*----- PROTECTED REGION ID(NEO6M::constructor_1) ENABLED START -----*/
+    .......
+/*----- PROTECTED REGION END -----*/    //  NEO6M::constructor_1</source><br/>
+<p>Все что находится внутри этого блока комментария при последующих перегенерациях кода в pogo не будет <strong>удаляться!</strong>. Все что в не блоках будет! Это те места где мы можем программировать и вносить свои правки.</p><br/>
+<p>Теперь какие главные функции содержит класс <strong>NEO6M</strong>:</p><br/>
+<source lang="cpp">void always_executed_hook();
+void read_attr_hardware(vector&lt;long&gt; &amp;attr_list);
+void read_gps_string(Tango::Attribute &amp;attr);
+void read_gps_array(Tango::Attribute &amp;attr);</source><br/>
+<p>Когда мы захотим прочитать значение атрибута <strong>gps_string</strong>, будут вызваны функции в следующем порядке: <strong>always_executed_hook</strong>, <strong>read_attr_hardware</strong> и <strong>read_gps_string</strong>. В read_gps_string произойдет заполнение gps_string значением.</p><br/>
+<source lang="cpp">void NEO6M::read_gps_string(Tango::Attribute &amp;attr)
+{
+    DEBUG_STREAM &lt;&lt; "NEO6M::read_gps_string(Tango::Attribute &amp;attr) entering... " &lt;&lt; endl;
+    /*----- PROTECTED REGION ID(NEO6M::read_gps_string) ENABLED START -----*/
+    //  Set the attribute value
+
+    *this-&gt;attr_gps_string_read = Tango::string_dup(this-&gt;gps.c_str());
+
+    attr.set_value(attr_gps_string_read);
+
+    /*----- PROTECTED REGION END -----*/    //  NEO6M::read_gps_string
+}</source><br/>
+<h2 id="kompilyaciya">Компиляция</h2><br/>
+<p>Заходим в папку с исходниками и:</p><br/>
+<source lang="bash">make</source><br/>
+<p>Программа скомпилируется в папку ~/DeviceServers.</p><br/>
+<source lang="bash">tango-cs@tangobox:~/DeviceServers$ ls
+NEO6M</source><br/>
+<h2 id="jive">JIVE</h2><br/>
+<source lang="bash">jive</source><br/>
+<p><img alt="image" data-blurred="true" data-src="https://habrastorage.org/webt/xa/p8/u4/xap8u4kcs__3dai1pnx1g5bsriq.jpeg" src="https://habrastorage.org/r/w780q1/webt/xa/p8/u4/xap8u4kcs__3dai1pnx1g5bsriq.jpeg"/></p><br/>
+<p>В БД уже есть какие-то устройства, создадим теперь наше <em>Edit-&gt;Create Server</em></p><br/>
+<p><img alt="image" data-blurred="true" data-src="https://habrastorage.org/webt/9k/zg/hz/9kzghz8hsf5bcd9-xl1_jwudabk.jpeg" src="https://habrastorage.org/r/w780q1/webt/9k/zg/hz/9kzghz8hsf5bcd9-xl1_jwudabk.jpeg"/></p><br/>
+<p>Теперь попробуем подключиться к нему:</p><br/>
+<p><img alt="image" data-blurred="true" data-src="https://habrastorage.org/webt/-i/x_/xx/-ix_xxjm8xx3nv6yy8ht62ot7_a.jpeg" src="https://habrastorage.org/r/w780q1/webt/-i/x_/xx/-ix_xxjm8xx3nv6yy8ht62ot7_a.jpeg"/></p><br/>
+<p>Ни чего не выйдет, сначала надо запустить нашу программу:</p><br/>
+<source lang="bash">sudo ./NEO6M neo6m -v2</source><br/>
+<p>Подключиться к com порту у меня можно только с правами <strong>root</strong>-а. <strong>v</strong> — уровень логирования.</p><br/>
+<h3 id="kak-zapustit-neskolko-ustroystv">Как запустить несколько устройств.</h3><br/>
+<p>Для того что бы запустить несколько таких устройств, необходимо создать нужное количество <strong>Devices</strong> в <strong>Jive</strong>:<br/>
+<img alt="image" data-blurred="true" data-src="https://habrastorage.org/webt/cs/-y/yu/cs-yyuplob93bay3a051gv5dnre.jpeg" src="https://habrastorage.org/r/w780q1/webt/cs/-y/yu/cs-yyuplob93bay3a051gv5dnre.jpeg"/></p><br/>
+<source lang="bash">NEO6M/neo6m/2
+...
+NEO6M/neo6m/N</source><br/>
+<p>Для каждого задать свои <strong>Properties</strong>. Адрес устройства и скорость подключения.<br/>
+Теперь запускаем:</p><br/>
+<source lang="bash">sudo ./NEO6M neo6m -v2</source><br/>
+<p>У нас запуститься два устройства сразу.</p><br/>
+<p>Теперь можем подключиться:</p><br/>
+<p><img alt="image" data-blurred="true" data-src="https://habrastorage.org/webt/gc/iz/ab/gcizabt2ztocjsdrzm6jwjtybxw.jpeg" src="https://habrastorage.org/r/w780q1/webt/gc/iz/ab/gcizabt2ztocjsdrzm6jwjtybxw.jpeg"/></p><br/>
+<h2 id="klient">Клиент</h2><br/>
+<p>В графике смотреть на картинки конечно хорошо, но нужно что-то более полезное. Напишем клиент который будет подключаться к нашему устройству и забирать с него показания.</p><br/>
+<source lang="cpp">#include &lt;tango.h&gt;
+using namespace Tango;
+
+int main(int argc, char **argv) {
+    try {
+
+        //
+        // create a connection to a TANGO device
+        //
+
+        DeviceProxy *device = new DeviceProxy("NEO6M/neo6m/1");
+
+        //
+        // Ping the device
+        //
+
+        device-&gt;ping();
+
+        //
+        // Execute a command on the device and extract the reply as a string
+        //
+
+        vector&lt;Tango::DevUChar&gt; gps_array;
+
+        DeviceData cmd_reply;
+        cmd_reply = device-&gt;command_inout("GPSArray");
+        cmd_reply &gt;&gt; gps_array;
+
+        for (int i = 0; i &lt; gps_array.size(); i++) {            
+            printf("%c", gps_array[i]);
+        }
+        puts("");
+
+        //
+        // Read a device attribute (string data type)
+        //
+
+        string spr;
+        DeviceAttribute att_reply;
+        att_reply = device-&gt;read_attribute("gps_string");
+        att_reply &gt;&gt; spr;
+        cout &lt;&lt; spr &lt;&lt; endl;
+
+        vector&lt;Tango::DevUChar&gt; spr2;
+        DeviceAttribute att_reply2;
+        att_reply2 = device-&gt;read_attribute("gps_array");
+        att_reply2.extract_read(spr2);
+
+        for (int i = 0; i &lt; spr2.size(); i++) {
+            printf("%c", spr2[i]);
+        }
+
+        puts("");
+
+        //
+        // Write a device attribute (string data type)
+        // Пример записи абстрактного атрибута доступного на запись.
+
+        DeviceAttribute value;
+        value = DeviceAttribute("attr_double", 32.3233);
+        device-&gt;write_attribute(value);
+
+    } catch (DevFailed &amp;e) {
+        Except::print_exception(e);
+        exit(-1);
+    }
+}</source><br/>
+<p>Как компилировать:</p><br/>
+<source lang="bash">g++ gps.cpp -I/usr/local/include/tango -I/usr/local/include -std=c++0x -Dlinux -L/usr/local/lib -ltango -lomniDynamic4 -lCOS4 -lomniORB4 -lomnithread -llog4tango -lzmq -ldl -lpthread -lstdc++</source><br/>
+<p>Результат:</p><br/>
+<source lang="bash">tango-cs@tangobox:~/workspace/c$ ./a.out 
+$GPRMC,,V,,,,,,,,,,N*53
+
+$GPRMC,,V,,,,,,,,,,N*53
+
+$GPRMC,,V,,,,,,,,,,N*53</source><br/>
+<p>Получили результат в качестве возврата команды, взятия атрибутов строки и массива символов.</p><br/>
+<h2 id="ssylki">Ссылки</h2><br/>
+<ul>
+<li><a href="https://github.com/dvjdjvu/tango_gps" rel="nofollow noopener noreferrer">Исходные коды</a></li>
+</ul><br/>
+<p>Статью писал для себя, потому что спустя некоторое время начинаю забывать как и что делать.</p><br/>
+<p>Спасибо за внимание.</p></div></div></div> <div class="v-portal" style="display:none;"></div></div> <!-- --> <!-- --></div>
